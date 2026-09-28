@@ -4,7 +4,10 @@
 class Points
 {
 public:
-    Points();
+    Points(double x = 0.0, double y = 0.0);
+    double getX() const;
+    double getY() const;
+    double Dist(const Points& other) const;
 
 private:
     double x_;
@@ -15,7 +18,6 @@ private:
 class Beam : public Points
 {
 public:
-
 
 private:
     double angle;
