@@ -12,3 +12,20 @@ double Points::Dist(const Points& other) const {
     return std::sqrt(diffx * diffx + diffy * diffy);
 }
 
+Beam::Beam(double x, double y, double angle): Points(x, y), angle_(angle) {}
+
+double Beam::getA() const { return angle_; }
+
+std::string Beam::Cords() const {
+    std::ostringstream oss;
+    oss << std::fixed << std::setprecision(3)
+        << getX() << " " << getY() << " " << angle_;
+    return oss.str();
+}
+
+std::string Points::Cords() const {
+    std::ostringstream oss;
+    oss << std::fixed << std::setprecision(3)
+        << x_ << " " << y_;
+    return oss.str();
+}
