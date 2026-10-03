@@ -1,0 +1,26 @@
+# ninja log v5
+152	1066	1791031401712403196	CMakeFiles/MirrorRoomSimulation.dir/main.cpp.o	29fe6e2e5e6822ba
+152	1064	1791031401710403190	CMakeFiles/MirrorRoomSimulation.dir/mainwindow.cpp.o	24eda48aa42846d
+152	170	1791031400812008600	CMakeFiles/MirrorRoomSimulation.dir/build/Desktop-Debug/.rcc/qrc_MirrorRoomSimulation_translations.cpp.o	e2448383c93eebe2
+149	152	1791031400799796159	/home/vladimir/MirrorRoomSimulation/build/Desktop-Debug/.rcc/qrc_MirrorRoomSimulation_translations.cpp	11290ce64550dd57
+7	149	1791031400790400239	/home/vladimir/MirrorRoomSimulation/build/Desktop-Debug/MirrorRoomSimulation_autogen/mocs_compilation.cpp	2899cf4184de851
+7	149	1791031400790400239	/home/vladimir/MirrorRoomSimulation/build/Desktop-Debug/MirrorRoomSimulation_autogen/timestamp	2899cf4184de851
+7	149	1791031400790400239	MirrorRoomSimulation_autogen/mocs_compilation.cpp	2899cf4184de851
+152	1037	1791031401683403102	CMakeFiles/MirrorRoomSimulation.dir/MirrorRoomSimulation_autogen/mocs_compilation.cpp.o	30556e7a3f4bb32b
+7	149	1791031400790400239	MirrorRoomSimulation_autogen/timestamp	2899cf4184de851
+1	7	1791031400654599891	/home/vladimir/MirrorRoomSimulation/build/Desktop-Debug/MirrorRoomSimulation_ru_RU.qm	60b55acc5e60afaf
+1066	1233	1791031401877403728	MirrorRoomSimulation	de70bd2309f2a13a
+149	152	1791031400799796159	.rcc/qrc_MirrorRoomSimulation_translations.cpp	11290ce64550dd57
+1	7	1791031400654599891	MirrorRoomSimulation_ru_RU.qm	60b55acc5e60afaf
+2	106	1791031659292925462	build.ninja	37861b6ea6780549
+2	18	1791031659319630416	MirrorRoomSimulation_autogen/timestamp	2899cf4184de851
+2	18	1791031659319630416	MirrorRoomSimulation_autogen/mocs_compilation.cpp	2899cf4184de851
+2	18	1791031659319630416	/home/vladimir/MirrorRoomSimulation/build/Desktop-Debug/MirrorRoomSimulation_autogen/timestamp	2899cf4184de851
+2	18	1791031659319630416	/home/vladimir/MirrorRoomSimulation/build/Desktop-Debug/MirrorRoomSimulation_autogen/mocs_compilation.cpp	2899cf4184de851
+19	29	1791031659331816718	CMakeFiles/MirrorRoomSimulation.dir/frontendoperators.cpp.o	3c1c510d68a0b309
+19	29	1791031659331816718	CMakeFiles/MirrorRoomSimulation.dir/points.cpp.o	d7da39dda6ad6ca9
+19	29	1791031659331816718	CMakeFiles/MirrorRoomSimulation.dir/backendoperators.cpp.o	6b296ff44fbab73f
+19	29	1791031659331816718	CMakeFiles/MirrorRoomSimulation.dir/mirror.cpp.o	7a641dfa2022a8a
+19	99	1791031659401630813	CMakeFiles/MirrorRoomSimulation.dir/polygon.cpp.o	8062678323f57750
+19	873	1791031660174634558	CMakeFiles/MirrorRoomSimulation.dir/mainwindow.cpp.o	24eda48aa42846d
+873	1042	1791031660342635373	MirrorRoomSimulation	2033af26f832e5e8

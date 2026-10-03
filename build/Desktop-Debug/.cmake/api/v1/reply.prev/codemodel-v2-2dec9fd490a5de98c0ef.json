@@ -1,0 +1,124 @@
+{
+	"configurations" : 
+	[
+		{
+			"directories" : 
+			[
+				{
+					"build" : ".",
+					"hasInstallRule" : true,
+					"jsonFile" : "directory-.-Debug-20065e383ee0dc3f9740.json",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "3.16"
+					},
+					"projectIndex" : 0,
+					"source" : ".",
+					"targetIndexes" : 
+					[
+						0,
+						1,
+						2,
+						3,
+						4,
+						5,
+						6,
+						7
+					]
+				}
+			],
+			"name" : "Debug",
+			"projects" : 
+			[
+				{
+					"directoryIndexes" : 
+					[
+						0
+					],
+					"name" : "MirrorRoomSimulation",
+					"targetIndexes" : 
+					[
+						0,
+						1,
+						2,
+						3,
+						4,
+						5,
+						6,
+						7
+					]
+				}
+			],
+			"targets" : 
+			[
+				{
+					"directoryIndex" : 0,
+					"id" : "MirrorRoomSimulation::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-MirrorRoomSimulation-Debug-e7b116bb6fe9c933a025.json",
+					"name" : "MirrorRoomSimulation",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "MirrorRoomSimulation_autogen::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-MirrorRoomSimulation_autogen-Debug-5cd038e4ebfecff26f0d.json",
+					"name" : "MirrorRoomSimulation_autogen",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "MirrorRoomSimulation_autogen_timestamp_deps::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-MirrorRoomSimulation_autogen_timestamp_deps-Debug-e78ad67c4ab2f01eb139.json",
+					"name" : "MirrorRoomSimulation_autogen_timestamp_deps",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "MirrorRoomSimulation_lrelease::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-MirrorRoomSimulation_lrelease-Debug-c9ae6158c7afb48f5bce.json",
+					"name" : "MirrorRoomSimulation_lrelease",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "MirrorRoomSimulation_lupdate::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-MirrorRoomSimulation_lupdate-Debug-e8e9ed59b3ae6bbe90a5.json",
+					"name" : "MirrorRoomSimulation_lupdate",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "MirrorRoomSimulation_other_files::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-MirrorRoomSimulation_other_files-Debug-b40536e78b46a658f2a9.json",
+					"name" : "MirrorRoomSimulation_other_files",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "release_translations::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-release_translations-Debug-47ad70d240a86cb4220a.json",
+					"name" : "release_translations",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "update_translations::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-update_translations-Debug-53366766befeca49aa53.json",
+					"name" : "update_translations",
+					"projectIndex" : 0
+				}
+			]
+		}
+	],
+	"kind" : "codemodel",
+	"paths" : 
+	{
+		"build" : "/home/vladimir/MirrorRoomSimulation/build/Desktop-Debug",
+		"source" : "/home/vladimir/MirrorRoomSimulation"
+	},
+	"version" : 
+	{
+		"major" : 2,
+		"minor" : 6
+	}
+}
