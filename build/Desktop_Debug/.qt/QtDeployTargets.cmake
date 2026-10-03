@@ -1,0 +1,2 @@
+set(__QT_DEPLOY_TARGET_MirrorRoomSimulation_FILE /home/xewhysis/C++/gitprojects/MirrorRoomSimulation/build/Desktop_Debug/MirrorRoomSimulation)
+set(__QT_DEPLOY_TARGET_MirrorRoomSimulation_TYPE EXECUTABLE)
