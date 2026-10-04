@@ -106,7 +106,7 @@ namespace {
         }
         return res;
     }
-} // namespace
+} 
 
 // ==========================================
 // ---------- Mirror (Прямое зеркало) -------
@@ -119,23 +119,19 @@ Points Mirror::getEnd() const { return end_; }
 double Mirror::Dist() const { return start_.Dist(end_); }
 
 Points Mirror::CircleCenter() const {
-    // У прямого зеркала нет центра кривизны, возвращаем середину
     return Points((start_.getX() + end_.getX()) / 2.0,
                   (start_.getY() + end_.getY()) / 2.0);
 }
 
 bool Mirror::PointOnArc(const Points& p, const Points& center) const {
-    // Проверка принадлежности точки ОТРЕЗКУ (прямому зеркалу)
-    (void)center; // Игнорируем центр для прямой
+    (void)center; 
     double dist = start_.Dist(end_);
     if (dist < EPS) return p.Dist(start_) < EPS;
 
-    // Проверка коллинеарности
     double cross = (p.getX() - start_.getX()) * (end_.getY() - start_.getY()) -
                    (p.getY() - start_.getY()) * (end_.getX() - start_.getX());
     if (std::abs(cross) / dist > EPS) return false;
 
-    // Проверка ограничивающего прямоугольника (bounding box)
     if (std::abs(end_.getX() - start_.getX()) > std::abs(end_.getY() - start_.getY())) {
         return (p.getX() >= std::min(start_.getX(), end_.getX()) - EPS &&
                 p.getX() <= std::max(start_.getX(), end_.getX()) + EPS);
@@ -146,22 +142,18 @@ bool Mirror::PointOnArc(const Points& p, const Points& center) const {
 }
 
 bool Mirror::Crossing(const Mirror& other) const {
-    // this - прямое зеркало. Пытаемся понять, чем является other.
     const ConvexMirror* cv = dynamic_cast<const ConvexMirror*>(&other);
     const ConcaveMirror* cc = dynamic_cast<const ConcaveMirror*>(&other);
 
     if (!cv && !cc) {
-        // other - тоже прямое зеркало. Пересекаем два отрезка.
         return SegmentSegment(this->start_, this->end_, other.getStart(), other.getEnd());
     }
 
-    // other - дуга. this - отрезок. Ищем пересечение отрезка с окружностью other.
     Points c = other.CircleCenter();
     double r = std::abs(other.getRad());
     
     auto intersections = SegmentCircle(this->start_, this->end_, c, r);
     for (const auto& pt : intersections) {
-        // Виртуальный вызов other.PointOnArc сам выберет нужный метод (Convex или Concave)
         if (other.PointOnArc(pt, c)) return true;
     }
     return false;
@@ -187,7 +179,6 @@ Points ConvexMirror::CircleCenter() const {
     double dx = (p2.getX() - p1.getX()) / d;
     double dy = (p2.getY() - p1.getY()) / d;
 
-    // Выбираем направление перпендикуляра "+" для выпуклости
     double perpX = -dy;
     double perpY =  dx;
 
@@ -198,7 +189,6 @@ bool ConvexMirror::PointOnArc(const Points& p, const Points& center) const {
     double distToCenter = p.Dist(center);
     if (std::abs(distToCenter - rad_) > 1e-6) return false;
 
-    // Проверка через полярные углы
     double a1 = std::atan2(start_.getY() - center.getY(), start_.getX() - center.getX());
     double a2 = std::atan2(end_.getY() - center.getY(), end_.getX() - center.getX());
     double ap = std::atan2(p.getY() - center.getY(), p.getX() - center.getX());
@@ -222,7 +212,6 @@ bool ConvexMirror::Crossing(const Mirror& other) const {
     const ConcaveMirror* cc = dynamic_cast<const ConcaveMirror*>(&other);
 
     if (!cv && !cc) {
-        // other - прямое зеркало. Пересекаем дугу (this) с отрезком (other).
         Points c = this->CircleCenter();
         double r = this->rad_;
         auto intersections = SegmentCircle(other.getStart(), other.getEnd(), c, r);
@@ -232,7 +221,6 @@ bool ConvexMirror::Crossing(const Mirror& other) const {
         return false;
     }
 
-    // other - дуга. Пересекаем две дуги.
     Points c1 = this->CircleCenter();
     Points c2 = other.CircleCenter();
     double r1 = this->rad_;
@@ -267,7 +255,6 @@ Points ConcaveMirror::CircleCenter() const {
     double dx = (p2.getX() - p1.getX()) / d;
     double dy = (p2.getY() - p1.getY()) / d;
 
-    // Выбираем ПРОТИВОПОЛОЖНОЕ направление перпендикуляра "-" для вогнутости
     double perpX = -dy;
     double perpY =  dx;
 
@@ -275,7 +262,6 @@ Points ConcaveMirror::CircleCenter() const {
 }
 
 bool ConcaveMirror::PointOnArc(const Points& p, const Points& center) const {
-    // Логика проверки дуги идентична выпуклому зеркалу
     double distToCenter = p.Dist(center);
     if (std::abs(distToCenter - rad_) > 1e-6) return false;
 
@@ -302,7 +288,6 @@ bool ConcaveMirror::Crossing(const Mirror& other) const {
     const ConcaveMirror* cc = dynamic_cast<const ConcaveMirror*>(&other);
 
     if (!cv && !cc) {
-        // other - прямое зеркало.
         Points c = this->CircleCenter();
         double r = this->rad_;
         auto intersections = SegmentCircle(other.getStart(), other.getEnd(), c, r);
@@ -312,7 +297,6 @@ bool ConcaveMirror::Crossing(const Mirror& other) const {
         return false;
     }
 
-    // other - дуга.
     Points c1 = this->CircleCenter();
     Points c2 = other.CircleCenter();
     double r1 = this->rad_;
