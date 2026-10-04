@@ -4,7 +4,7 @@
 #include <vector>
 #include <iostream>
 #include <fstream>
-#include "mirror.h"
+#include "nmirror.h"
 
 class Polygon
 {
