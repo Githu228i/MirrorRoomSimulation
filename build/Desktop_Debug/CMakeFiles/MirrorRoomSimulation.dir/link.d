@@ -5,11 +5,12 @@ MirrorRoomSimulation: \
   CMakeFiles/MirrorRoomSimulation.dir/MirrorRoomSimulation_autogen/mocs_compilation.cpp.o \
   CMakeFiles/MirrorRoomSimulation.dir/main.cpp.o \
   CMakeFiles/MirrorRoomSimulation.dir/mainwindow.cpp.o \
-  CMakeFiles/MirrorRoomSimulation.dir/backendoperators.cpp.o \
-  CMakeFiles/MirrorRoomSimulation.dir/frontendoperators.cpp.o \
   CMakeFiles/MirrorRoomSimulation.dir/mirror.cpp.o \
   CMakeFiles/MirrorRoomSimulation.dir/points.cpp.o \
+  CMakeFiles/MirrorRoomSimulation.dir/frontendoperators.cpp.o \
+  CMakeFiles/MirrorRoomSimulation.dir/backendoperators.cpp.o \
   CMakeFiles/MirrorRoomSimulation.dir/polygon.cpp.o \
+  CMakeFiles/MirrorRoomSimulation.dir/build/Desktop_Debug/.qt/rcc/qrc_MirrorRoomSimulation_translations.cpp.o \
   /usr/lib/libQt6Widgets.so.6.11.2 \
   /usr/lib/libQt6Gui.so.6.11.2 \
   /usr/lib/libGLX.so \
@@ -105,15 +106,17 @@ CMakeFiles/MirrorRoomSimulation.dir/main.cpp.o:
 
 CMakeFiles/MirrorRoomSimulation.dir/mainwindow.cpp.o:
 
-CMakeFiles/MirrorRoomSimulation.dir/backendoperators.cpp.o:
-
-CMakeFiles/MirrorRoomSimulation.dir/frontendoperators.cpp.o:
-
 CMakeFiles/MirrorRoomSimulation.dir/mirror.cpp.o:
 
 CMakeFiles/MirrorRoomSimulation.dir/points.cpp.o:
 
+CMakeFiles/MirrorRoomSimulation.dir/frontendoperators.cpp.o:
+
+CMakeFiles/MirrorRoomSimulation.dir/backendoperators.cpp.o:
+
 CMakeFiles/MirrorRoomSimulation.dir/polygon.cpp.o:
+
+CMakeFiles/MirrorRoomSimulation.dir/build/Desktop_Debug/.qt/rcc/qrc_MirrorRoomSimulation_translations.cpp.o:
 
 /usr/lib/libQt6Widgets.so.6.11.2:
 

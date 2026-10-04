@@ -18,6 +18,7 @@ public:
     bool Check();
 
     int Size();
+    void TraceBeam(int maxBounces = 100);
 
 private:
     std::vector<Mirror> sides_;
