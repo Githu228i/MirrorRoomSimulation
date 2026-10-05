@@ -1,34 +1,30 @@
-#ifndef POINTS_H
-#define POINTS_H
-
+#pragma once
 #include <string>
-#include <iomanip>
 #include <sstream>
+#include <iomanip>
 
-class Points
-{
+class Points {
 public:
     Points(double x = 0.0, double y = 0.0);
+    virtual ~Points() = default;
+
     double getX() const;
     double getY() const;
     double Dist(const Points& other) const;
-    std::string Cords() const;
+    virtual std::string Cords() const;
 
-private:
+protected:
     double x_;
     double y_;
 };
 
-
-class Beam : public Points
-{
+class Beam : public Points {
 public:
     Beam(double x = 0.0, double y = 0.0, double angle = 0.0);
+
     double getA() const;
-    std::string Cords() const;
+    std::string Cords() const override;
 
 private:
     double angle_;
 };
-
-#endif // POINTS_H
