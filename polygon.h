@@ -2,6 +2,7 @@
 #define POLYGON_H
 
 #include <vector>
+#include <memory>
 #include "mirror.h"
 
 class Polygon
@@ -11,10 +12,12 @@ public:
     friend class MainWindow;
     friend class FrontEndOperators;
     bool isExist();
+    bool isCycled();
 private:
-    std::vector<Mirror> sides_;
+    std::vector<std::unique_ptr<Mirror>> sides_;
     Points first;
     bool isExist_ = false;
+    bool isCycled_ = false;
     Beam beam_;
 };
 

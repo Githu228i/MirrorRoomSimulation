@@ -5,3 +5,7 @@ Polygon::Polygon() {}
 bool Polygon::isExist() {
     return isExist_;
 }
+
+bool Polygon::isCycled() {
+    return isCycled_;
+}

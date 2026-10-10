@@ -113,6 +113,22 @@ build CMakeFiles/MirrorRoomSimulation.dir/polygon.cpp.o: CXX_COMPILER__MirrorRoo
   OBJECT_DIR = CMakeFiles/MirrorRoomSimulation.dir
   OBJECT_FILE_DIR = CMakeFiles/MirrorRoomSimulation.dir
 
+build CMakeFiles/MirrorRoomSimulation.dir/changeorconnectdialog.cpp.o: CXX_COMPILER__MirrorRoomSimulation_unscanned_Debug /home/vladimir/MirrorRoomSimulation/changeorconnectdialog.cpp || cmake_object_order_depends_target_MirrorRoomSimulation
+  DEFINES = -DQT_CORE_LIB -DQT_GUI_LIB -DQT_WIDGETS_LIB
+  DEP_FILE = CMakeFiles/MirrorRoomSimulation.dir/changeorconnectdialog.cpp.o.d
+  FLAGS = -g -std=gnu++17 -fdiagnostics-color=always -fPIC
+  INCLUDES = -I/home/vladimir/MirrorRoomSimulation/build/Desktop-Debug/MirrorRoomSimulation_autogen/include -isystem /usr/include/x86_64-linux-gnu/qt6/QtCore -isystem /usr/include/x86_64-linux-gnu/qt6 -isystem /usr/lib/x86_64-linux-gnu/qt6/mkspecs/linux-g++ -isystem /usr/include/x86_64-linux-gnu/qt6/QtWidgets -isystem /usr/include/x86_64-linux-gnu/qt6/QtGui
+  OBJECT_DIR = CMakeFiles/MirrorRoomSimulation.dir
+  OBJECT_FILE_DIR = CMakeFiles/MirrorRoomSimulation.dir
+
+build CMakeFiles/MirrorRoomSimulation.dir/changepointdialog.cpp.o: CXX_COMPILER__MirrorRoomSimulation_unscanned_Debug /home/vladimir/MirrorRoomSimulation/changepointdialog.cpp || cmake_object_order_depends_target_MirrorRoomSimulation
+  DEFINES = -DQT_CORE_LIB -DQT_GUI_LIB -DQT_WIDGETS_LIB
+  DEP_FILE = CMakeFiles/MirrorRoomSimulation.dir/changepointdialog.cpp.o.d
+  FLAGS = -g -std=gnu++17 -fdiagnostics-color=always -fPIC
+  INCLUDES = -I/home/vladimir/MirrorRoomSimulation/build/Desktop-Debug/MirrorRoomSimulation_autogen/include -isystem /usr/include/x86_64-linux-gnu/qt6/QtCore -isystem /usr/include/x86_64-linux-gnu/qt6 -isystem /usr/lib/x86_64-linux-gnu/qt6/mkspecs/linux-g++ -isystem /usr/include/x86_64-linux-gnu/qt6/QtWidgets -isystem /usr/include/x86_64-linux-gnu/qt6/QtGui
+  OBJECT_DIR = CMakeFiles/MirrorRoomSimulation.dir
+  OBJECT_FILE_DIR = CMakeFiles/MirrorRoomSimulation.dir
+
 build CMakeFiles/MirrorRoomSimulation.dir/build/Desktop-Debug/.rcc/qrc_MirrorRoomSimulation_translations.cpp.o: CXX_COMPILER__MirrorRoomSimulation_unscanned_Debug /home/vladimir/MirrorRoomSimulation/build/Desktop-Debug/.rcc/qrc_MirrorRoomSimulation_translations.cpp || cmake_object_order_depends_target_MirrorRoomSimulation
   DEFINES = -DQT_CORE_LIB -DQT_GUI_LIB -DQT_WIDGETS_LIB
   DEP_FILE = CMakeFiles/MirrorRoomSimulation.dir/build/Desktop-Debug/.rcc/qrc_MirrorRoomSimulation_translations.cpp.o.d
@@ -129,7 +145,7 @@ build CMakeFiles/MirrorRoomSimulation.dir/build/Desktop-Debug/.rcc/qrc_MirrorRoo
 #############################################
 # Link the executable MirrorRoomSimulation
 
-build MirrorRoomSimulation: CXX_EXECUTABLE_LINKER__MirrorRoomSimulation_Debug CMakeFiles/MirrorRoomSimulation.dir/MirrorRoomSimulation_autogen/mocs_compilation.cpp.o CMakeFiles/MirrorRoomSimulation.dir/main.cpp.o CMakeFiles/MirrorRoomSimulation.dir/mainwindow.cpp.o CMakeFiles/MirrorRoomSimulation.dir/mirror.cpp.o CMakeFiles/MirrorRoomSimulation.dir/points.cpp.o CMakeFiles/MirrorRoomSimulation.dir/frontendoperators.cpp.o CMakeFiles/MirrorRoomSimulation.dir/backendoperators.cpp.o CMakeFiles/MirrorRoomSimulation.dir/polygon.cpp.o CMakeFiles/MirrorRoomSimulation.dir/build/Desktop-Debug/.rcc/qrc_MirrorRoomSimulation_translations.cpp.o | /usr/lib/x86_64-linux-gnu/libQt6Widgets.so.6.4.2 /usr/lib/x86_64-linux-gnu/libQt6Gui.so.6.4.2 /usr/lib/x86_64-linux-gnu/libQt6Core.so.6.4.2 /usr/lib/x86_64-linux-gnu/libGLX.so /usr/lib/x86_64-linux-gnu/libOpenGL.so || MirrorRoomSimulation_autogen MirrorRoomSimulation_autogen_timestamp_deps MirrorRoomSimulation_lrelease
+build MirrorRoomSimulation: CXX_EXECUTABLE_LINKER__MirrorRoomSimulation_Debug CMakeFiles/MirrorRoomSimulation.dir/MirrorRoomSimulation_autogen/mocs_compilation.cpp.o CMakeFiles/MirrorRoomSimulation.dir/main.cpp.o CMakeFiles/MirrorRoomSimulation.dir/mainwindow.cpp.o CMakeFiles/MirrorRoomSimulation.dir/mirror.cpp.o CMakeFiles/MirrorRoomSimulation.dir/points.cpp.o CMakeFiles/MirrorRoomSimulation.dir/frontendoperators.cpp.o CMakeFiles/MirrorRoomSimulation.dir/backendoperators.cpp.o CMakeFiles/MirrorRoomSimulation.dir/polygon.cpp.o CMakeFiles/MirrorRoomSimulation.dir/changeorconnectdialog.cpp.o CMakeFiles/MirrorRoomSimulation.dir/changepointdialog.cpp.o CMakeFiles/MirrorRoomSimulation.dir/build/Desktop-Debug/.rcc/qrc_MirrorRoomSimulation_translations.cpp.o | /usr/lib/x86_64-linux-gnu/libQt6Widgets.so.6.4.2 /usr/lib/x86_64-linux-gnu/libQt6Gui.so.6.4.2 /usr/lib/x86_64-linux-gnu/libQt6Core.so.6.4.2 /usr/lib/x86_64-linux-gnu/libGLX.so /usr/lib/x86_64-linux-gnu/libOpenGL.so || MirrorRoomSimulation_autogen MirrorRoomSimulation_autogen_timestamp_deps MirrorRoomSimulation_lrelease
   FLAGS = -g
   LINK_LIBRARIES = /usr/lib/x86_64-linux-gnu/libQt6Widgets.so.6.4.2  /usr/lib/x86_64-linux-gnu/libQt6Gui.so.6.4.2  /usr/lib/x86_64-linux-gnu/libQt6Core.so.6.4.2  /usr/lib/x86_64-linux-gnu/libGLX.so  /usr/lib/x86_64-linux-gnu/libOpenGL.so
   OBJECT_DIR = CMakeFiles/MirrorRoomSimulation.dir
@@ -290,7 +306,7 @@ build CMakeFiles/MirrorRoomSimulation_lrelease | ${cmake_ninja_workdir}CMakeFile
 #############################################
 # Phony custom command for CMakeFiles/MirrorRoomSimulation_autogen_timestamp_deps
 
-build CMakeFiles/MirrorRoomSimulation_autogen_timestamp_deps | ${cmake_ninja_workdir}CMakeFiles/MirrorRoomSimulation_autogen_timestamp_deps: phony /usr/lib/x86_64-linux-gnu/libQt6Widgets.so.6.4.2 /usr/lib/qt6/libexec/uic /usr/lib/x86_64-linux-gnu/libQt6Core.so.6.4.2 /usr/lib/qt6/libexec/moc
+build CMakeFiles/MirrorRoomSimulation_autogen_timestamp_deps | ${cmake_ninja_workdir}CMakeFiles/MirrorRoomSimulation_autogen_timestamp_deps: phony /usr/lib/x86_64-linux-gnu/libQt6Core.so.6.4.2 /usr/lib/qt6/libexec/moc /usr/lib/qt6/libexec/uic /usr/lib/x86_64-linux-gnu/libQt6Widgets.so.6.4.2
 
 
 #############################################

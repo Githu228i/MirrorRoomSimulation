@@ -1,5 +1,6 @@
 /home/vladimir/MirrorRoomSimulation/build/Desktop-Debug/MirrorRoomSimulation_autogen/EWIEGA46WW/moc_mainwindow.cpp: /home/vladimir/MirrorRoomSimulation/mainwindow.h \
   /home/vladimir/MirrorRoomSimulation/build/Desktop-Debug/MirrorRoomSimulation_autogen/moc_predefs.h \
+  /home/vladimir/MirrorRoomSimulation/changepointdialog.h \
   /home/vladimir/MirrorRoomSimulation/frontendoperators.h \
   /home/vladimir/MirrorRoomSimulation/mirror.h \
   /home/vladimir/MirrorRoomSimulation/points.h \
@@ -435,7 +436,9 @@
   /usr/include/x86_64-linux-gnu/qt6/QtGui/qvector2d.h \
   /usr/include/x86_64-linux-gnu/qt6/QtGui/qvectornd.h \
   /usr/include/x86_64-linux-gnu/qt6/QtGui/qwindowdefs.h \
+  /usr/include/x86_64-linux-gnu/qt6/QtWidgets/QDialog \
   /usr/include/x86_64-linux-gnu/qt6/QtWidgets/QMainWindow \
+  /usr/include/x86_64-linux-gnu/qt6/QtWidgets/qdialog.h \
   /usr/include/x86_64-linux-gnu/qt6/QtWidgets/qmainwindow.h \
   /usr/include/x86_64-linux-gnu/qt6/QtWidgets/qsizepolicy.h \
   /usr/include/x86_64-linux-gnu/qt6/QtWidgets/qtabwidget.h \

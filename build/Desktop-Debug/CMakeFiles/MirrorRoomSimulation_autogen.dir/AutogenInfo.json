@@ -202,6 +202,18 @@
 			null
 		],
 		[
+			"/home/vladimir/MirrorRoomSimulation/changeorconnectdialog.h",
+			"MU",
+			"EWIEGA46WW/moc_changeorconnectdialog.cpp",
+			null
+		],
+		[
+			"/home/vladimir/MirrorRoomSimulation/changepointdialog.h",
+			"MU",
+			"EWIEGA46WW/moc_changepointdialog.cpp",
+			null
+		],
+		[
 			"/home/vladimir/MirrorRoomSimulation/frontendoperators.h",
 			"MU",
 			"EWIEGA46WW/moc_frontendoperators.cpp",
@@ -295,6 +307,16 @@
 	[
 		[
 			"/home/vladimir/MirrorRoomSimulation/backendoperators.cpp",
+			"MU",
+			null
+		],
+		[
+			"/home/vladimir/MirrorRoomSimulation/changeorconnectdialog.cpp",
+			"MU",
+			null
+		],
+		[
+			"/home/vladimir/MirrorRoomSimulation/changepointdialog.cpp",
 			"MU",
 			null
 		],

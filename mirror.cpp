@@ -1,112 +1,438 @@
 #include "mirror.h"
+
+#include <QPainter>
+#include <QPainterPath>
+
 #include <cmath>
-#include <algorithm>
 
-// ---------- Конструктор ----------
-Mirror::Mirror(Points st, Points end) {
-    start_ = st;
-    end_   = end;
 
+Mirror::Mirror(Points st, Points end)
+    : start_(st),
+    end_(end)
+{
 }
 
-// ---------- Геттеры ----------
-//double Mirror::getRad() const   { return rad_; }
-Points Mirror::getStart() const { return start_; }
-Points Mirror::getEnd() const   { return end_; }
 
-// ---------- Длина хорды линзы ----------
-double Mirror::Dist() const {
+double Mirror::getRad() const
+{
+    return 0.0;
+}
+
+
+NotPlaneMirror::NotPlaneMirror(
+    Points st,
+    Points end,
+    double rad
+    )
+    : Mirror(st, end),
+    rad_(rad)
+{
+}
+
+
+double NotPlaneMirror::getRad() const
+{
+    return rad_;
+}
+
+
+ConvexMirror::ConvexMirror(
+    Points st,
+    Points end,
+    double rad
+    )
+    : NotPlaneMirror(st, end, rad)
+{
+}
+
+
+ConcaveMirror::ConcaveMirror(
+    Points st,
+    Points end,
+    double rad
+    )
+    : NotPlaneMirror(st, end, rad)
+{
+}
+
+
+PlaneMirror::PlaneMirror(
+    Points st,
+    Points end
+    )
+    : Mirror(st, end)
+{
+}
+
+
+Points Mirror::getStart() const
+{
+    return start_;
+}
+
+
+Points Mirror::getEnd() const
+{
+    return end_;
+}
+
+
+double Mirror::Dist() const
+{
     return start_.Dist(end_);
 }
 
-// ---------- Центр окружности, образующей линзу ----------
-// Points Mirror::CircleCenter() const {
-//     Points p1 = start_;
-//     Points p2 = end_;
-//     double r = rad_;
 
-//     double d = p1.Dist(p2);
+/*
+ * Получение центра окружности.
+ *
+ * leftSide = true:
+ *     центр находится слева от направления
+ *     start -> end.
+ *
+ * leftSide = false:
+ *     центр находится справа.
+ */
+Points Mirror::CircleCenter(bool leftSide) const
+{
+    const double x1 = start_.getX();
+    const double y1 = start_.getY();
 
-//     if (d < 1e-12) {
-//         return Points((p1.getX() + p2.getX()) / 2.0,
-//                       (p1.getY() + p2.getY()) / 2.0);
-//     }
+    const double x2 = end_.getX();
+    const double y2 = end_.getY();
 
-//     if (std::abs(r) < d / 2.0) {
-//         return Points((p1.getX() + p2.getX()) / 2.0,
-//                       (p1.getY() + p2.getY()) / 2.0);
-//     }
+    const double dx = x2 - x1;
+    const double dy = y2 - y1;
 
-//     Points mid((p1.getX() + p2.getX()) / 2.0,
-//                (p1.getY() + p2.getY()) / 2.0);
+    const double d = std::sqrt(
+        dx * dx + dy * dy
+        );
 
-//     double h = std::sqrt(r * r - (d / 2.0) * (d / 2.0));
+    const double radius = getRad();
 
-//     double dx = (p2.getX() - p1.getX()) / d;
-//     double dy = (p2.getY() - p1.getY()) / d;
+    // Невозможно построить окружность.
+    if (d == 0.0 || radius < d / 2.0)
+    {
+        return Points(
+            (x1 + x2) / 2.0,
+            (y1 + y2) / 2.0
+            );
+    }
 
-//     double perpX = -dy;
-//     double perpY =  dx;
+    const double mx = (x1 + x2) / 2.0;
+    const double my = (y1 + y2) / 2.0;
 
-//     double sign = (r > 0) ? 1.0 : -1.0;
+    const double h = std::sqrt(
+        radius * radius
+        - d * d / 4.0
+        );
 
-//     return Points(mid.getX() + sign * h * perpX,
-//                   mid.getY() + sign * h * perpY);
-// }
+    /*
+     * Левая нормаль к направлению start -> end:
+     *
+     * (-dy, dx)
+     */
+    double nx = -dy / d;
+    double ny =  dx / d;
 
-// ---------- Лежит ли точка на дуге линзы ----------
-// bool Mirror::PointOnArc(const Points& p, const Points& center) const {
-//     double distToCenter = p.Dist(center);
-//     if (std::abs(distToCenter - std::abs(rad_)) > 1e-6)
-//         return false;
+    if (!leftSide)
+    {
+        nx = -nx;
+        ny = -ny;
+    }
 
-//     double dx = end_.getX() - start_.getX();
-//     double dy = end_.getY() - start_.getY();
-//     double len2 = dx * dx + dy * dy;
-//     if (len2 < 1e-12) return false;
+    return Points(
+        mx + nx * h,
+        my + ny * h
+        );
+}
 
-//     double t = ((p.getX() - start_.getX()) * dx +
-//                 (p.getY() - start_.getY()) * dy) / len2;
 
-//     return (t >= -1e-6 && t <= 1.0 + 1e-6);
-// }
+bool Mirror::PointOnArc(
+    const Points& p,
+    const Points& center
+    ) const
+{
+    const double radius = center.Dist(start_);
+    const double distance = center.Dist(p);
 
-// ---------- Пересечение двух линз ----------
-// bool Mirror::Crossing(const Mirror& other) const {
-//     Points c1 = CircleCenter();
-//     Points c2 = other.CircleCenter();
+    const double eps = 1e-6;
 
-//     double r1 = std::abs(rad_);
-//     double r2 = std::abs(other.rad_);
-//     double d  = c1.Dist(c2);
+    return std::abs(distance - radius) < eps;
+}
 
-//     if (d < 1e-12)
-//         return std::abs(r1 - r2) < 1e-9;
 
-//     if (d > r1 + r2 + 1e-9)            return false;
-//     if (d < std::abs(r1 - r2) - 1e-9)  return false;
+bool Mirror::Crossing(const Mirror& other) const
+{
+    Q_UNUSED(other);
 
-//     double a = (r1 * r1 - r2 * r2 + d * d) / (2.0 * d);
-//     double hSq = r1 * r1 - a * a;
-//     if (hSq < -1e-9) return false;
-//     double h = std::sqrt(std::max(0.0, hSq));
+    // Пока не реализовано.
+    return false;
+}
 
-//     double px = c1.getX() + a * (c2.getX() - c1.getX()) / d;
-//     double py = c1.getY() + a * (c2.getY() - c1.getY()) / d;
 
-//     Points inter1(px + h * (c2.getY() - c1.getY()) / d,
-//                   py - h * (c2.getX() - c1.getX()) / d);
-//     Points inter2(px - h * (c2.getY() - c1.getY()) / d,
-//                   py + h * (c2.getX() - c1.getX()) / d);
+/*
+ * Обычное плоское зеркало.
+ */
+void PlaneMirror::Draw(
+    QPainter& painter,
+    bool insideOnLeft
+    ) const
+{
+    Q_UNUSED(insideOnLeft);
 
-//     if ((PointOnArc(inter1, c1) && other.PointOnArc(inter1, c2)) ||
-//         (PointOnArc(inter2, c1) && other.PointOnArc(inter2, c2)))
-//         return true;
+    painter.drawLine(
+        start_.getX(),
+        start_.getY(),
+        end_.getX(),
+        end_.getY()
+        );
+}
 
-//     if (PointOnArc(other.getStart(), c1) && PointOnArc(other.getEnd(), c1))
-//         return true;
-//     if (other.PointOnArc(getStart(), c2) && other.PointOnArc(getEnd(), c2))
-//         return true;
 
-//     return false;
-// }
+/*
+ * Рисование круглой дуги.
+ *
+ * centerLeft:
+ *   true  -> центр окружности слева от start -> end
+ *   false -> справа.
+ */
+static void drawCircularArc(
+    QPainter& painter,
+    const Mirror& mirror,
+    bool centerLeft
+    )
+{
+    const double x1 = mirror.getStart().getX();
+    const double y1 = mirror.getStart().getY();
+
+    const double x2 = mirror.getEnd().getX();
+    const double y2 = mirror.getEnd().getY();
+
+    const double radius = mirror.getRad();
+
+    const double dx = x2 - x1;
+    const double dy = y2 - y1;
+
+    const double distance =
+        std::sqrt(dx * dx + dy * dy);
+
+    // Совпадающие точки
+    if (distance < 1e-9)
+        return;
+
+    // Радиус слишком маленький
+    if (radius < distance / 2.0)
+    {
+        painter.drawLine(
+            x1,
+            y1,
+            x2,
+            y2
+            );
+
+        return;
+    }
+
+    /*
+     * Середина хорды.
+     */
+    const double mx =
+        (x1 + x2) / 2.0;
+
+    const double my =
+        (y1 + y2) / 2.0;
+
+    /*
+     * Единичная нормаль.
+     *
+     * (-dy, dx) — слева
+     * ( dy,-dx) — справа
+     */
+    double nx = -dy / distance;
+    double ny =  dx / distance;
+
+    if (!centerLeft)
+    {
+        nx = -nx;
+        ny = -ny;
+    }
+
+    /*
+     * Расстояние от середины хорды
+     * до центра окружности.
+     */
+    const double halfChord =
+        distance / 2.0;
+
+    const double h =
+        std::sqrt(
+            radius * radius
+            - halfChord * halfChord
+            );
+
+    /*
+     * Центр окружности.
+     */
+    const double cx =
+        mx + nx * h;
+
+    const double cy =
+        my + ny * h;
+
+    /*
+     * Угол начала и конца.
+     */
+    const double pi =
+        3.14159265358979323846;
+
+    const double startAngle =
+        std::atan2(
+            y1 - cy,
+            x1 - cx
+            );
+
+    const double endAngle =
+        std::atan2(
+            y2 - cy,
+            x2 - cx
+            );
+
+    /*
+     * Угол дуги.
+     */
+    double delta =
+        endAngle - startAngle;
+
+    /*
+     * Нормализуем в диапазон
+     * [-pi; pi].
+     */
+    while (delta > pi)
+        delta -= 2.0 * pi;
+
+    while (delta < -pi)
+        delta += 2.0 * pi;
+
+    /*
+     * Qt:
+     *
+     * положительный угол —
+     * против часовой стрелки.
+     *
+     * Поэтому направление зависит
+     * от выбранной стороны.
+     */
+    if (centerLeft)
+    {
+        if (delta > 0)
+            delta -= 2.0 * pi;
+    }
+    else
+    {
+        if (delta < 0)
+            delta += 2.0 * pi;
+    }
+
+    /*
+     * Если из-за направления получилась
+     * длинная дуга — выбираем короткую.
+     */
+    if (delta > pi)
+        delta = pi;
+
+    if (delta < -pi)
+        delta = -pi;
+
+    /*
+     * QRectF окружности.
+     */
+    QRectF rect(
+        cx - radius,
+        cy - radius,
+        2.0 * radius,
+        2.0 * radius
+        );
+
+    /*
+     * drawArc рисует ТОЛЬКО дугу окружности,
+     * а не сектор и не область внутри неё.
+     *
+     * Угол Qt задаётся в 1/16 градуса.
+     */
+    const int start =
+        qRound(
+            -startAngle
+            * 180.0
+            / pi
+            * 16.0
+            );
+
+    const int span =
+        qRound(
+            -delta
+            * 180.0
+            / pi
+            * 16.0
+            );
+
+    painter.drawArc(
+        rect,
+        start,
+        span
+        );
+}
+
+
+/*
+ * ВЫПУКЛОЕ зеркало.
+ *
+ * Если внутренняя сторона полигона находится слева
+ * от направления start -> end, центр окружности
+ * должен находиться справа.
+ *
+ * Если внутренняя сторона справа,
+ * центр должен быть слева.
+ */
+void ConvexMirror::Draw(
+    QPainter& painter,
+    bool insideOnLeft
+    ) const
+{
+    /*
+     * Для выпуклого зеркала центр находится
+     * внутри полигона.
+     */
+    const bool centerLeft = insideOnLeft;
+
+    drawCircularArc(
+        painter,
+        *this,
+        centerLeft
+        );
+}
+
+
+/*
+ * ВОГНУТОЕ зеркало.
+ *
+ * Центр окружности находится снаружи полигона,
+ * поэтому дуга выгибается внутрь комнаты.
+ */
+void ConcaveMirror::Draw(
+    QPainter& painter,
+    bool insideOnLeft
+    ) const
+{
+    /*
+     * Для вогнутого зеркала центр находится
+     * снаружи полигона.
+     */
+    const bool centerLeft = !insideOnLeft;
+
+    drawCircularArc(
+        painter,
+        *this,
+        centerLeft
+        );
+}

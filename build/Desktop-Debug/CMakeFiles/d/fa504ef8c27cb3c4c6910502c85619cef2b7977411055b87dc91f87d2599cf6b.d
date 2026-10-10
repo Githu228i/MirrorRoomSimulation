@@ -6,6 +6,10 @@ MirrorRoomSimulation_autogen/timestamp: \
   CMakeFiles/3.28.3/CMakeCXXCompiler.cmake \
   CMakeFiles/3.28.3/CMakeSystem.cmake \
   MirrorRoomSimulation_autogen/moc_predefs.h \
+  /home/vladimir/MirrorRoomSimulation/changeorconnectdialog.cpp \
+  /home/vladimir/MirrorRoomSimulation/changeorconnectdialog.h \
+  /home/vladimir/MirrorRoomSimulation/changepointdialog.cpp \
+  /home/vladimir/MirrorRoomSimulation/changepointdialog.h \
   /home/vladimir/MirrorRoomSimulation/frontendoperators.cpp \
   /home/vladimir/MirrorRoomSimulation/frontendoperators.h \
   /home/vladimir/MirrorRoomSimulation/main.cpp \
@@ -450,7 +454,9 @@ MirrorRoomSimulation_autogen/timestamp: \
   /usr/include/x86_64-linux-gnu/qt6/QtGui/qvector2d.h \
   /usr/include/x86_64-linux-gnu/qt6/QtGui/qvectornd.h \
   /usr/include/x86_64-linux-gnu/qt6/QtGui/qwindowdefs.h \
+  /usr/include/x86_64-linux-gnu/qt6/QtWidgets/QDialog \
   /usr/include/x86_64-linux-gnu/qt6/QtWidgets/QMainWindow \
+  /usr/include/x86_64-linux-gnu/qt6/QtWidgets/qdialog.h \
   /usr/include/x86_64-linux-gnu/qt6/QtWidgets/qmainwindow.h \
   /usr/include/x86_64-linux-gnu/qt6/QtWidgets/qsizepolicy.h \
   /usr/include/x86_64-linux-gnu/qt6/QtWidgets/qtabwidget.h \

@@ -29,6 +29,8 @@ set(TS_FILES
 
 qt_add_executable(MirrorRoomSimulation
     ${PROJECT_SOURCES}
+    changeorconnectdialog.h changeorconnectdialog.cpp
+    changepointdialog.h changepointdialog.cpp
 )
 
 qt_add_translations(MirrorRoomSimulation
