@@ -1,5 +1,5 @@
 #pragma once
-#include "nmirror.h"
+#include "mirror.h"
 #include "points.h"
 #include <vector>
 #include <fstream>
