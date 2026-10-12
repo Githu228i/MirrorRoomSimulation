@@ -106,8 +106,32 @@ namespace {
 // ============================================================
 // Polygon
 // ============================================================
+Polygon::Polygon() {}
+
 Polygon::Polygon(const std::vector<Mirror>& sides, Beam beam)
-    : sides_(sides), beam_(beam) {}
+    : beam_(beam)
+{
+    sides_.reserve(sides.size());
+    for (const auto& s : sides) {
+        if (dynamic_cast<const PlaneMirror*>(&s)) {
+            sides_.push_back(std::make_unique<PlaneMirror>(s.getStart(), s.getEnd()));
+        }
+        else if (dynamic_cast<const ConcaveMirror*>(&s)) {
+            sides_.push_back(std::make_unique<ConcaveMirror>(s.getStart(), s.getEnd(), s.getRad()));
+        }
+        else if (dynamic_cast<const ConvexMirror*>(&s)) {
+            sides_.push_back(std::make_unique<ConvexMirror>(s.getStart(), s.getEnd(), s.getRad()));
+        }
+    }
+}
+
+bool Polygon::isExist() const {
+    return isExist_;
+}
+
+bool Polygon::isCycled() const {
+    return isCycled_;
+}
 
 void Polygon::Write() const {
     std::ofstream log("points.txt");
@@ -118,13 +142,27 @@ void Polygon::Write() const {
     log << "-------------------------------" << std::endl;
     log << "Vertices of the polygon:" << std::endl;
     for (const auto& s : sides_) {
-        log << s.getStart().Cords() << std::endl;
+        log << s->getStart().Cords() << std::endl;
     }
     log << "Beam: " << beam_.Cords() << std::endl;
 }
 
 void Polygon::Push(const Mirror& other) {
-    sides_.push_back(other);
+    if (dynamic_cast<const PlaneMirror*>(&other)) {
+        sides_.push_back(std::make_unique<PlaneMirror>(
+            other.getStart(), other.getEnd()
+            ));
+    }
+    else if (dynamic_cast<const ConcaveMirror*>(&other)) {
+        sides_.push_back(std::make_unique<ConcaveMirror>(
+            other.getStart(), other.getEnd(), other.getRad()
+            ));
+    }
+    else if (dynamic_cast<const ConvexMirror*>(&other)) {
+        sides_.push_back(std::make_unique<ConvexMirror>(
+            other.getStart(), other.getEnd(), other.getRad()
+            ));
+    }
     Write();
 }
 
@@ -143,21 +181,21 @@ bool Polygon::Check() const {
     if (n < 2) return false;
 
     // Вырожденный двуугольник из двух отрезков - не многоугольник
-    if (n == 2 && sides_[0].isFlat() && sides_[1].isFlat()) return false;
+    if (n == 2 && sides_[0]->isFlat() && sides_[1]->isFlat()) return false;
 
     // Контур должен быть замкнутым и непрерывным
     for (int i = 0; i < n; ++i) {
-        if (!Close(sides_[i].getEnd(), sides_[(i + 1) % n].getStart())) return false;
+        if (!Close(sides_[i]->getEnd(), sides_[(i + 1) % n]->getStart())) return false;
     }
 
     // Любая пара сторон: общие точки допустимы только в общих вершинах соседей
     for (int i = 0; i < n; ++i) {
         for (int j = i + 1; j < n; ++j) {
             std::vector<Points> allowed;
-            if (j == i + 1)            allowed.push_back(sides_[i].getEnd());
-            if (i == 0 && j == n - 1)  allowed.push_back(sides_[j].getEnd());
+            if (j == i + 1)            allowed.push_back(sides_[i]->getEnd());
+            if (i == 0 && j == n - 1)  allowed.push_back(sides_[j]->getEnd());
 
-            for (const Points& p : sides_[i].Intersections(sides_[j])) {
+            for (const Points& p : sides_[i]->Intersections(*sides_[j])) {
                 bool ok = false;
                 for (const Points& a : allowed) {
                     if (Close(p, a)) { ok = true; break; }
@@ -187,7 +225,7 @@ void Polygon::TraceBeam(int maxBounces) {
         int bestIdx = -1;
 
         for (int i = 0; i < Size(); ++i) {
-            double t = RayMirrorIntersect(pos, dir, sides_[i]);
+            double t = RayMirrorIntersect(pos, dir, *sides_[i]);
             if (t > TRACE_EPS && (bestT < 0 || t < bestT)) {
                 bestT = t;
                 bestIdx = i;
@@ -199,7 +237,7 @@ void Polygon::TraceBeam(int maxBounces) {
                    pos.getY() + bestT * dir.getY());
         log << hit.getX() << " " << hit.getY() << std::endl;
 
-        Points normal = GetNormal(hit, dir, sides_[bestIdx]);
+        Points normal = GetNormal(hit, dir, *sides_[bestIdx]);
         dir = ReflectDirection(dir, normal);
         pos = hit;
     }
