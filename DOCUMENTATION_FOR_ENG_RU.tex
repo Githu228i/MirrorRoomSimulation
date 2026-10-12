@@ -1,0 +1,784 @@
+\documentclass[a4paper,11pt]{article}
+
+\usepackage[T2A]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[russian,english]{babel}
+\usepackage[margin=2.3cm]{geometry}
+\usepackage{parskip}
+\usepackage{microtype}
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage{hyperref}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{enumitem}
+\usepackage{titlesec}
+\usepackage{fancyhdr}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,positioning,shapes.geometric,fit,backgrounds}
+
+\hypersetup{colorlinks=true,linkcolor=blue!55!black,urlcolor=blue!55!black}
+
+\lstdefinestyle{cpp}{
+    language=C++,
+    basicstyle=\ttfamily\footnotesize,
+    keywordstyle=\color{blue!70!black}\bfseries,
+    commentstyle=\color{green!45!black}\itshape,
+    stringstyle=\color{red!60!black},
+    numbers=left, numberstyle=\tiny\color{gray}, numbersep=6pt,
+    frame=single, rulecolor=\color{gray!40},
+    breaklines=true, showstringspaces=false, tabsize=4,
+    captionpos=b,
+}
+\lstset{style=cpp}
+
+\titleformat{\section}{\Large\bfseries}{\thesection}{0.8em}{}
+\titleformat{\subsection}{\large\bfseries}{\thesubsection}{0.7em}{}
+\titleformat{\subsubsection}{\normalsize\bfseries}{\thesubsubsection}{0.6em}{}
+
+\pagestyle{fancy}
+\fancyhf{}
+\rhead{\small MirrorRoomSimulation}
+\lhead{\small Документация разработчика}
+\cfoot{\thepage}
+
+\newcommand{\file}[1]{\texttt{#1}}
+\newcommand{\code}[1]{\texttt{#1}}
+
+\title{\textbf{MirrorRoomSimulation}\\[0.3em]
+       \large Документация для программиста\\[0.2em]
+       \normalsize (актуально для текущего состояния кода)}
+\author{Репозиторий: \texttt{Githu228i/MirrorRoomSimulation}}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+\noindent
+Этот документ — карта проекта для программиста, который открывает
+\file{MirrorRoomSimulation} впервые. Здесь описано, что где лежит, как
+устроена архитектура, где именно находится вычислительная логика
+(спойлер: \emph{не} в \file{backendoperators.cpp} — там пусто),
+как расширять код и какие в проекте есть подводные камни. Документ
+написан по факту чтения исходников, а не по замыслу.
+\end{abstract}
+
+\tableofcontents
+\newpage
+
+% ============================================================
+\section{О проекте}
+
+\file{MirrorRoomSimulation} — учебное/демонстрационное приложение на C++
+с GUI на Qt~6 (Widgets). Пользователь кликами мыши строит замкнутую
+(или незамкнутую) цепочку зеркал в «комнате», редактирует точки и типы
+зеркал через диалоги, а затем может трассировать луч, отражающийся от
+зеркал.
+
+\subsection{Стек}
+
+\begin{longtable}{@{}p{4cm}p{10.5cm}@{}}
+\toprule
+\textbf{Компонент} & \textbf{Назначение} \\ \midrule
+\endhead
+C++17 & Язык. \\
+Qt~6 (Widgets) & GUI, \code{QPainter}, диалоги, сигналы/слоты. \\
+CMake $\geq$ 3.16 & Сборка. \\
+Qt Creator & Рекомендуемая IDE. \\
+\code{clangd} & Опционально. \\
+\bottomrule
+\end{longtable}
+
+\subsection{Быстрый старт}
+
+\begin{lstlisting}[language=bash,caption={Сборка}]
+cmake -S . -B build/Desktop-Debug -DCMAKE_BUILD_TYPE=Debug
+cmake --build build/Desktop-Debug -j
+./build/Desktop-Debug/MirrorRoomSimulation
+\end{lstlisting}
+
+\begin{quote}
+\textbf{Важно.} \file{build/}, \file{.qtcreator/}, \file{CMakeLists.txt.user},
+\file{*.back*}, \file{.cache/} — не должны попадать в Git.
+См.~\ref{sec:git}.
+\end{quote}
+
+% ============================================================
+\section{Структура репозитория}
+
+\begin{longtable}{@{}p{5.8cm}p{8.7cm}@{}}
+\toprule
+\textbf{Файл} & \textbf{Назначение} \\ \midrule
+\endhead
+\file{main.cpp} & \code{QApplication}, установка переводов, запуск \code{MainWindow}. \\
+\file{mainwindow.h/.cpp} & Главное окно. Обработка мыши, \code{paintEvent}, вызов диалогов. \\
+\file{mainwindow.ui} & Пустой дизайн-файл: только \code{centralwidget}, \code{menubar}, \code{statusbar}. Вся отрисовка — вручную в \code{paintEvent}. \\
+\file{points.h/.cpp} & \code{Points} (базовая точка) и \code{Beam} (луч: точка + угол). \\
+\file{mirror.h/.cpp} & Иерархия \code{Mirror} и её наследники. Пересечения зеркал. Рисование. \\
+\file{polygon.h/.cpp} & \code{Polygon}: набор зеркал, замкнутость, валидация, трассировка луча. \\
+\file{frontendoperators.h/.cpp} & Менеджер сцены: \code{CreatePoint}, \code{ConnectPoints}, \code{ChangeMirror}. \\
+\file{backendoperators.h/.cpp} & \textbf{Пустая заглушка.} Только конструктор. Никакой логики нет. \\
+\file{changeorconnectdialog.h/.cpp} & Диалог с двумя кнопками: «Изменить» / «Подключить». \\
+\file{changepointdialog.h/.cpp} & Диалог редактирования точки. Определяет \code{ChangePointData}. \\
+\file{MirrorRoomSimulation\_ru\_RU.ts} & Файл переводов (пустой). \\
+\file{README.md} & Одна строка. \\
+\file{CMakeLists.txt} & Сборка. \\
+\bottomrule
+\end{longtable}
+
+\begin{quote}
+\textbf{Ориентир.} Если вы ищете «где же логика backend» — идите в
+\file{polygon.cpp} (трассировка луча) и \file{mirror.cpp} (пересечения).
+\file{backendoperators.cpp} — это заготовка, которую, судя по всему,
+планировали наполнить, но не наполнили.
+\end{quote}
+
+% ============================================================
+\section{Архитектура}
+
+\subsection{Слои}
+
+\begin{enumerate}[label=\textbf{\arabic*.},leftmargin=*]
+    \item \textbf{Геометрия-примитив:} \code{Points}, \code{Beam}.
+    \item \textbf{Модель зеркал:} \code{Mirror} и наследники + геометрические
+          алгоритмы пересечений (в анонимном namespace \file{mirror.cpp}).
+    \item \textbf{Композиция сцены:} \code{Polygon} — держит вектор зеркал,
+          трассирует луч, валидирует контур.
+    \item \textbf{Менеджер сцены:} \code{FrontEndOperators} — обёртка над
+          \code{Polygon} для UI-операций.
+    \item \textbf{GUI:} \code{MainWindow} + диалоги.
+\end{enumerate}
+
+\begin{quote}
+\textbf{Правило.} Модель (\code{Points}, \code{Mirror}, \code{Polygon}) не
+должна знать о \code{QMainWindow}. Однако \code{Polygon} уже знает о
+\code{QPainter} — наследники \code{Mirror} умеют себя рисовать. Это
+осознанное упрощение (см.~\ref{sec:known-issues}).
+\end{quote}
+
+\subsection{Иерархия классов}
+
+\begin{center}
+\begin{tikzpicture}[
+    every node/.style={draw, rounded corners, font=\footnotesize,
+                       minimum height=0.7cm, align=center, inner sep=4pt},
+    edge from parent/.style={draw, -Latex},
+    level 1/.style={sibling distance=4cm, level distance=1.2cm},
+    level 2/.style={sibling distance=3cm, level distance=1.2cm},
+    level 3/.style={sibling distance=2.5cm, level distance=1.2cm},
+    scale=0.95, transform shape
+]
+\node (Mirror) {Mirror\\\tiny (abstract)}
+    child { node (Plane) {PlaneMirror} }
+    child { node (NotPlane) {NotPlaneMirror}
+        child { node (Conv) {ConvexMirror} }
+        child { node (Conc) {ConcaveMirror} }
+    };
+\end{tikzpicture}
+\end{center}
+
+\begin{itemize}[leftmargin=*]
+    \item \code{Mirror} — абстрактный базовый класс. Поля:
+          \code{start\_}, \code{end\_}, \code{rad\_}.
+          Виртуальный деструктор обязателен — хранится в
+          \code{std::unique\_ptr<Mirror>}.
+    \item \code{PlaneMirror} — плоское зеркало (rad = 0). Переопределяет
+          \code{isFlat()} $\to$ \code{true}.
+    \item \code{NotPlaneMirror} — промежуточный, защищённый конструктор.
+    \item \code{ConvexMirror} — \code{rad > 0}, центр окружности «слева»
+          от хорды.
+    \item \code{ConcaveMirror} — \code{rad < 0}, центр «справа».
+\end{itemize}
+
+\subsection{Поток данных}
+
+\begin{enumerate}[leftmargin=*]
+    \item Пользователь кликает в \code{MainWindow::mousePressEvent}.
+    \item \code{MainWindow} решает: попадание в точку, близко, новая точка.
+    \item Вызывается один из методов \code{FrontEndOperators}:
+          \code{CreatePoint}, \code{ConnectPoints} или \code{ChangeMirror}.
+    \item Тот манипулирует \code{Polygon::sides\_}
+          (\code{std::vector<std::unique\_ptr<Mirror>>}).
+    \item \code{MainWindow} вызывает \code{update()} — перерисовка.
+    \item \code{MainWindow::paintEvent} рисует \code{first} и все зеркала
+          через их виртуальный \code{Draw()}.
+\end{enumerate}
+
+% ============================================================
+\section{Ключевые сущности}
+
+\subsection{Points и Beam (\file{points.h})}
+
+\begin{lstlisting}[caption={Points / Beam}]
+class Points {
+public:
+    Points(double x = 0.0, double y = 0.0);
+    virtual ~Points() = default;
+    double getX() const;
+    double getY() const;
+    double Dist(const Points& other) const;
+    virtual std::string Cords() const;
+protected:
+    double x_, y_;
+};
+
+class Beam : public Points {
+public:
+    Beam(double x = 0.0, double y = 0.0, double angle = 0.0);
+    double getA() const;
+    std::string Cords() const override;
+private:
+    double angle_;
+};
+\end{lstlisting}
+
+\begin{quote}
+\code{Cords()} возвращает строку формата \code{"x y"} (или
+\code{"x y angle"} для луча) с точностью 3 знака. Используется только
+для отладочной записи в файл.
+\end{quote}
+
+\subsection{Иерархия Mirror (\file{mirror.h})}
+
+Ключевые методы \code{Mirror}:
+
+\begin{longtable}{@{}p{6.3cm}p{8.2cm}@{}}
+\toprule
+\textbf{Метод} & \textbf{Назначение} \\ \midrule
+\endhead
+\code{Mirror(st, end, rad)} & Бросает \code{std::invalid\_argument} при нулевой хорде или $|rad| < d/2$. \\
+\code{isFlat()} & \code{true}, если $|rad| < 10^{-9}$ или $> 10^{7}$. \\
+\code{CircleCenter()} & Центр окружности; сторона задаётся знаком \code{rad}. \\
+\code{CircleCenter(bool leftSide)} & Явное задание стороны. \\
+\code{PointOnArc(p, c)} & Лежит ли точка на дуге/отрезке. \\
+\code{Intersections(other)} & Вектор точек пересечения. \\
+\code{Touches(other)} & \code{!Intersections().empty()}. \\
+\code{Crossing(other)} & Пересекаются не только в общих концах. \\
+\code{Draw(painter, insideOnLeft)} & Виртуальный. Чисто виртуальный в базе. \\
+\bottomrule
+\end{longtable}
+
+Знак \code{rad\_}:
+\begin{itemize}[leftmargin=*]
+    \item $rad > 0$ — центр \emph{слева} от направления \code{start → end}.
+          Соответствует \code{ConvexMirror}.
+    \item $rad < 0$ — центр \emph{справа}. Соответствует \code{ConcaveMirror}.
+    \item $rad = 0$ — отрезок (\code{PlaneMirror}).
+\end{itemize}
+
+\subsection{Polygon (\file{polygon.h})}
+
+Хранилище сцены.
+
+\begin{lstlisting}[caption={Поля Polygon}]
+class Polygon {
+    // ...
+private:
+    std::vector<std::unique_ptr<Mirror>> sides_;
+    Points first;             // первая точка незамкнутого контура
+    bool isExist_ = false;    // создана ли первая точка
+    bool isCycled_ = false;   // замкнут ли контур
+    Beam beam_;               // луч для трассировки
+};
+\end{lstlisting}
+
+Ключевые методы:
+
+\begin{longtable}{@{}p{5.5cm}p{9cm}@{}}
+\toprule
+\textbf{Метод} & \textbf{Что делает} \\ \midrule
+\endhead
+\code{Push(const Mirror\&)} & Копирует зеркало через \code{dynamic\_cast} и добавляет в \code{sides\_}. Вызывает \code{Write()}. \\
+\code{Del(int idx)} & Удаляет зеркало по индексу. Вызывает \code{Write()}. \\
+\code{Check()} & Валидация: контур замкнут, стороны пересекаются только в общих вершинах соседей. \\
+\code{TraceBeam(maxBounces)} & Трассировка луча. Пишет \code{beam.txt}. \\
+\code{Write()} & Дамп вершин и луча в \code{points.txt}. \\
+\bottomrule
+\end{longtable}
+
+\begin{quote}
+\textbf{Побочный эффект.} \code{Push}, \code{Del}, \code{Write},
+\code{TraceBeam} открывают файлы. При интенсивном редактировании это
+может тормозить и засорять рабочую директорию.
+\end{quote}
+
+\subsection{FrontEndOperators (\file{frontendoperators.h})}
+
+\begin{lstlisting}[caption={FrontEndOperators}]
+class FrontEndOperators {
+public:
+    FrontEndOperators();
+    void CreatePoint(double x, double y);
+    void ConnectPoints(int num);
+    void ChangeMirror(int num, const ChangePointData &data);
+    friend class MainWindow;
+private:
+    Polygon prototype;
+};
+\end{lstlisting}
+
+\begin{quote}
+\textbf{Имя вводит в заблуждение.} Это \emph{менеджер сцены}, а не слой
+отрисовки. Отрисовка — в \code{MainWindow::paintEvent} и
+\code{Mirror::Draw}.
+\end{quote}
+
+Логика методов:
+\begin{itemize}[leftmargin=*]
+    \item \code{CreatePoint} — добавляет новую точку.
+          Если \code{isExist\_} ложно — сохраняет \code{first} и ставит
+          флаг. Иначе строит \code{PlaneMirror} от конца последнего
+          зеркала к новой точке. Лимит: 8 точек
+          (\code{if (prototype.sides\_.size() < 8)}).
+    \item \code{ConnectPoints(num)} — замыкает контур: удаляет
+          зеркала до \code{num}, добавляет последнее зеркало от
+          \code{end} к \code{start}, ставит \code{isCycled\_ = true}.
+    \item \code{ChangeMirror(num, data)} — самая сложная функция.
+          Разбирает случаи: последняя точка незамкнутого контура,
+          первая точка замкнутого, обычная точка. Везде через
+          \code{dynamic\_cast} определяет тип зеркала и пересоздаёт
+          соседние.
+\end{itemize}
+
+\subsection{MainWindow (\file{mainwindow.h})}
+
+Поля всего два:
+\begin{lstlisting}
+Ui::MainWindow *ui;
+FrontEndOperators polygonCreator;
+\end{lstlisting}
+
+Логика:
+\begin{itemize}[leftmargin=*]
+    \item \code{mousePressEvent} — вся обработка кликов. Хардкод:
+          \code{y > 1000} отсекается, радиус попадания в точку
+          \code{25}, минимальное расстояние между точками \code{100}.
+    \item \code{paintEvent} — рисует \code{first}, линию от \code{first}
+          к \code{temp[0]->getStart()} и все зеркала.
+\end{itemize}
+
+\subsection{Диалоги}
+
+\code{ChangeOrConnectDialog} — простое окно с двумя кнопками
+(\code{accept} / \code{reject}). Текст-заглушка:
+\code{"ТУТ БУДЕТ ТВОЙ ТЕКСТ"}.
+
+\code{ChangePointDialog} — редактирование одной точки. Возвращает
+структуру:
+
+\begin{lstlisting}
+struct ChangePointData {
+    double x;
+    double y;
+    int mirrorType;   // 0 = plane, 1 = concave, 2 = convex
+    double radius;
+};
+\end{lstlisting}
+
+Если \code{lastPoint == true} — комбобокс типа зеркала и поле радиуса
+отключены (у последней точки зеркала ещё нет).
+
+\subsection{BackEndOperators — пустая заглушка}
+
+\begin{lstlisting}[caption={Весь файл backendoperators.cpp}]
+#include "backendoperators.h"
+BackEndOperators::BackEndOperators() {}
+\end{lstlisting}
+
+\begin{quote}
+\textbf{Важно.} Не ищите здесь логику. Её нет. Вся вычислительная
+часть живёт в \file{mirror.cpp} и \file{polygon.cpp} в безымянных
+\code{namespace \{ \}}. Если вы хотите что-то добавить «в backend» —
+логичнее либо дописать \code{BackEndOperators}, либо создать новый
+модуль, а не размазывать по \file{polygon.cpp}.
+\end{quote}
+
+% ============================================================
+\section{Взаимодействие пользователя}
+
+\subsection{Создание точки}
+
+Клик в пустое место:
+\begin{enumerate}[leftmargin=*]
+    \item Если попадание в существующую точку ($\le 25$) — редактирование.
+    \item Если близко к существующей ($\le 100$) — сообщение «Точки слишком близко!».
+    \item Иначе — \code{CreatePoint(x, y)}.
+\end{enumerate}
+
+Лимит: \textbf{8 сторон}.
+
+\subsection{Редактирование точки}
+
+Клик по существующей точке:
+\begin{itemize}[leftmargin=*]
+    \item \textbf{Контур замкнут} — сразу открывается
+          \code{ChangePointDialog}.
+    \item \textbf{Контур не замкнут} — сначала
+          \code{ChangeOrConnectDialog} («Изменить» или «Подключить»).
+\end{itemize}
+
+\subsection{Соединение точек}
+
+Выбор «Подключить» в незамкнутом контуре:
+\begin{itemize}[leftmargin=*]
+    \item Последнее зеркало подключить нельзя —
+          \code{QMessageBox::critical}.
+    \item Иначе \code{ConnectPoints(i)}: удаляет все зеркала до
+          \code{i}, добавляет одно замыкающее.
+\end{itemize}
+
+% ============================================================
+\section{Геометрические алгоритмы}
+
+\subsection{Пересечения (\file{mirror.cpp}, анонимный namespace)}
+
+\begin{itemize}[leftmargin=*]
+    \item \code{IntersectSegments} — отрезок/отрезок,
+          включая коллинеарный случай с вычислением перекрытия.
+    \item \code{IntersectSegmentArc} — отрезок/дуга, квадратное
+          уравнение.
+    \item \code{IntersectArcs} — дуга/дуга, стандартная формула
+          пересечения окружностей с проверкой \code{PointOnArc}.
+\end{itemize}
+
+Константы:
+\code{EPS = 1e-9}, \code{POINT\_EPS = 1e-6}, \code{PAR\_EPS = 1e-10},
+\code{FLAT\_R = 1e7}.
+
+\subsection{Трассировка луча (\file{polygon.cpp})}
+
+\code{TraceBeam}:
+\begin{enumerate}[leftmargin=*]
+    \item Позиция и направление из \code{beam\_}.
+    \item Для каждого зеркала — пересечение луча.
+    \item Выбор ближайшего с $t > 10^{-7}$.
+    \item Нормаль в точке удара (\code{GetNormal}).
+    \item Отражение \code{d' = d - 2(d·n)n}
+          (\code{ReflectDirection}), с перенормировкой.
+    \item Запись в \code{beam.txt}: позиции через пробел.
+\end{enumerate}
+
+% ============================================================
+\section{Файловый ввод/вывод}
+
+\begin{longtable}{@{}p{4cm}p{4.5cm}p{6cm}@{}}
+\toprule
+\textbf{Файл} & \textbf{Кто пишет} & \textbf{Формат} \\ \midrule
+\endhead
+\file{points.txt} & \code{Polygon::Write()} & Заголовок, координаты вершин, луч. \\
+\file{beam.txt} & \code{Polygon::TraceBeam()} & x y для каждой точки удара. \\
+\bottomrule
+\end{longtable}
+
+\begin{quote}
+\textbf{Внимание.} Оба файла пишутся в текущую рабочую директорию
+(не в \code{\$HOME} и не в директорию проекта). При запуске из Qt Creator
+это \code{build/Desktop-Debug/}. Легко закоммитить по ошибке — держите
+их в \code{.gitignore}.
+\end{quote}
+
+% ============================================================
+\section{Сборка и CMake}
+
+\begin{lstlisting}[caption={CMakeLists.txt, фрагмент}]
+set(PROJECT_SOURCES
+    main.cpp
+    mainwindow.cpp mainwindow.h mainwindow.ui
+    mirror.h mirror.cpp
+    points.h points.cpp
+    frontendoperators.h frontendoperators.cpp
+    backendoperators.h backendoperators.cpp
+    polygon.h polygon.cpp
+)
+qt_add_executable(MirrorRoomSimulation
+    ${PROJECT_SOURCES}
+    changeorconnectdialog.h changeorconnectdialog.cpp
+    changepointdialog.h changepointdialog.cpp
+)
+\end{lstlisting}
+
+\begin{quote}
+\textbf{Странность.} Диалоги добавлены отдельным блоком в
+\code{qt\_add\_executable}, а не в \code{PROJECT\_SOURCES}. Если
+добавляете новый файл — выбирайте одно место и следуйте стилю.
+\end{quote}
+
+\subsection{Переводы}
+
+\begin{lstlisting}[language=bash]
+lupdate . -ts MirrorRoomSimulation_ru_RU.ts
+lrelease MirrorRoomSimulation_ru_RU.ts
+\end{lstlisting}
+
+\begin{quote}
+\textbf{Баг.} В \file{main.cpp} имя перевода —
+\code{"MirrorRoomSimulationProject\_" + locale}, а CMake генерирует
+\code{MirrorRoomSimulation\_}. Префикс \code{Project} лишний.
+Либо приведите \file{main.cpp} к \code{"MirrorRoomSimulation\_"},
+либо переименуйте \code{TS\_FILES}. Плюс сам \file{.ts} пустой —
+переводить пока нечего.
+\end{quote}
+
+% ============================================================
+\section{Точки расширения}
+\label{sec:extending}
+
+\begin{longtable}{@{}p{6cm}p{9cm}@{}}
+\toprule
+\textbf{Задача} & \textbf{Куда идти} \\ \midrule
+\endhead
+Добавить новый тип зеркала &
+Наследник \code{Mirror} + \code{Draw}. Плюс: конструктор в
+\code{Polygon::Push}, \code{ChangeMirror}, \code{dynamic\_cast}-ветки. \\
+\addlinespace
+Изменить физику отражения &
+\code{ReflectDirection} и \code{GetNormal} в \file{polygon.cpp}
+(анонимный namespace). \\
+\addlinespace
+Добавить тип геометрического объекта &
+\code{Points} или отдельный класс. \\
+\addlinespace
+Изменить отрисовку &
+\code{Mirror::Draw} в наследниках, \code{drawCircularArc} в
+\file{mirror.cpp}, \code{MainWindow::paintEvent}. \\
+\addlinespace
+Добавить пункт меню / горячую клавишу &
+\code{mainwindow.ui} (пустой) или \code{MainWindow} в коде. \\
+\addlinespace
+Снять лимит в 8 точек &
+\code{FrontEndOperators::CreatePoint}, условие
+\code{sides\_.size() < 8}. \\
+\addlinespace
+Настроить трассировку (число отражений) &
+Параметр \code{maxBounces} у \code{TraceBeam}. Сейчас не вызывается
+из UI. \\
+\bottomrule
+\end{longtable}
+
+\subsection{Чек-лист при добавлении файла}
+
+\begin{enumerate}[leftmargin=*]
+    \item Создать \file{.h} и \file{.cpp}.
+    \item Добавить в \code{CMakeLists.txt} (в \code{PROJECT\_SOURCES}
+          или рядом с диалогами — но не в оба места сразу).
+    \item Если класс — \code{QObject}, добавить \code{Q\_OBJECT}.
+    \item Если есть переводимые строки — \code{tr(...)}.
+    \item Собрать, убедиться, что нет предупреждений moc/uic.
+    \item Закоммитить только исходники и CMake, без \file{build/}.
+\end{enumerate}
+
+% ============================================================
+\section{Известные проблемы и странности}
+\label{sec:known-issues}
+
+\begin{longtable}{@{}p{6.5cm}p{8cm}@{}}
+\toprule
+\textbf{Что} & \textbf{Где / почему} \\ \midrule
+\endhead
+\code{BackEndOperators} пуст &
+\file{backendoperators.cpp}. Логика размазана по \file{polygon.cpp}
+и \file{mirror.cpp}. \\
+\addlinespace
+Несоответствие имён переводов &
+\file{main.cpp} ищет \code{MirrorRoomSimulationProject\_*},
+CMake генерирует \code{MirrorRoomSimulation\_*}. \\
+\addlinespace
+Магические числа &
+\code{1600}, \code{1200}, \code{1000}, \code{25}, \code{100},
+\code{8}, \code{4}. Все в \file{mainwindow.cpp} и
+\file{frontendoperators.cpp}. \\
+\addlinespace
+\code{Polygon::Write()} на каждый \code{Push}/\code{Del} &
+Открывает \file{points.txt} при каждом изменении. \\
+\addlinespace
+\code{dynamic\_cast}-цепочки &
+\code{Polygon::Push}, \code{FrontEndOperators::ChangeMirror}. При
+добавлении нового типа зеркала придётся дописывать везде. \\
+\addlinespace
+\code{MainWindow} — friend & У \code{Polygon} и
+\code{FrontEndOperators}. Ломает инкапсуляцию. \\
+\addlinespace
+\code{mirror.cpp} включает \code{QPainter} &
+Модель знает о GUI. Смешение слоёв. \\
+\addlinespace
+Текст-заглушка в диалоге &
+\code{"ТУТ БУДЕТ ТВОЙ ТЕКСТ"} в
+\file{changeorconnectdialog.cpp}. \\
+\addlinespace
+\file{README.md} пуст & Одна строка. \\
+\addlinespace
+\code{ChangePointData} в \file{changepointdialog.h} &
+\code{FrontEndOperators} тянет диалоговый заголовок только ради
+структуры. Логичнее вынести в отдельный \file{changepointdata.h}. \\
+\bottomrule
+\end{longtable}
+
+% ============================================================
+\section{Правила работы с Git}
+\label{sec:git}
+
+\subsection{Что не коммитить}
+
+\begin{itemize}[leftmargin=*]
+    \item \file{build/}, \file{build-*/}, \file{cmake-build-*/};
+    \item \file{CMakeLists.txt.user}, \file{*.user}, \file{.qtcreator/};
+    \item \file{.cache/}, \file{compile\_commands.json};
+    \item \file{*.back}, \file{*.back1}, \file{*.back2}, \file{*~},
+          \file{*.orig}, \file{*.rej};
+    \item \file{points.txt}, \file{beam.txt} (артефакты работы).
+\end{itemize}
+
+\begin{lstlisting}[language=bash,caption={.gitignore}]
+build/
+build-*/
+cmake-build-*/
+CMakeLists.txt.user
+*.user
+*.user.*
+.qtcreator/
+.cache/
+compile_commands.json
+*.back
+*.back1
+*.back2
+*.back3
+*~
+*.orig
+*.rej
+points.txt
+beam.txt
+\end{lstlisting}
+
+\subsection{Если мусор уже в индексе}
+
+\begin{lstlisting}[language=bash]
+git rm -r --cached build/ .qtcreator/ CMakeLists.txt.user
+git rm --cached points.txt beam.txt
+git commit -m "Stop tracking build artifacts and IDE files"
+\end{lstlisting}
+
+\subsection{Стратегия веток}
+
+Ветки \code{main} и \code{backend} имеют \emph{разную структуру файлов}.
+\code{git merge} между ними даёт десятки конфликтов типа
+«modify/delete» и не имеет смысла.
+
+\begin{itemize}[leftmargin=*]
+    \item Если \code{backend} — актуальная версия:
+\begin{lstlisting}[language=bash]
+git branch main-backup main     # резервная копия
+git checkout backend
+git branch -f main backend
+git checkout main
+git push --force-with-lease origin main
+\end{lstlisting}
+    \item Если нужно перенести отдельные коммиты —
+          \code{git cherry-pick <hash>}.
+    \item Избегайте \code{git merge} между ветками с разной структурой
+          файлов: Git не сопоставляет \file{mirror.cpp} и
+          \file{backendoperators.cpp} как один модуль.
+\end{itemize}
+
+% ============================================================
+\section{Соглашения по коду}
+
+\begin{itemize}[leftmargin=*]
+    \item Классы — \code{CamelCase}; методы — \code{camelCase};
+          приватные поля — \code{camelCase\_} (например, \code{sides\_},
+          \code{rad\_}).
+    \item Заголовки — include guards, не \code{\#pragma once}
+          (в проекте везде guards).
+    \item Не использовать \code{using namespace std;}.
+    \item Forward-declaration в \file{.h} (\code{class QPainter;})
+          вместо \code{\#include <QPainter>} — как в \file{mirror.h}.
+    \item Публичные методы — с кратким комментарием о
+          предусловиях (как у \code{Mirror}).
+    \item Новые типы зеркал — наследовать от \code{Mirror}, реализовать
+          чисто виртуальный \code{Draw}.
+\end{itemize}
+
+% ============================================================
+\section{Отладка и типовые проблемы}
+
+\begin{longtable}{@{}p{6.3cm}p{8.2cm}@{}}
+\toprule
+\textbf{Симптом} & \textbf{Что делать} \\ \midrule
+\endhead
+\code{undefined reference to vtable} &
+Забыт \code{Q\_OBJECT} (для QObject-классов) или файл не добавлен
+в CMake. \\
+\addlinespace
+\code{moc\_*.cpp} не найден &
+Проверить \code{AUTOMOC ON}. \\
+\addlinespace
+Не рисуется новая точка &
+Не вызван \code{update()} после изменения модели. \\
+\addlinespace
+Сцена не перерисовывается после \code{ChangeMirror} &
+Проверить возврат из \code{ChangeMirror} — там \code{return} в нескольких
+ветках. \\
+\addlinespace
+\code{std::invalid\_argument} из \code{Mirror} &
+Радиус меньше половины хорды или нулевая хорда. \\
+\addlinespace
+Переводы не подхватываются &
+Префикс \code{MirrorRoomSimulationProject\_} в \file{main.cpp}
+не совпадает с CMake. См.~раздел «Переводы». \\
+\addlinespace
+В рабочей папке появляется \file{points.txt} &
+Это \code{Polygon::Write()}. Добавить в \code{.gitignore}. \\
+\addlinespace
+Qt Creator создаёт \file{*.back1/.back2} &
+Добавить в \code{.gitignore}, удалить \code{rm -f *.back*}. \\
+\bottomrule
+\end{longtable}
+
+% ============================================================
+\section{Шпаргалка}
+
+\begin{lstlisting}[language=bash,caption={Часто используемое}]
+# Сборка
+cmake --build build/Desktop-Debug -j
+
+# Пересборка с нуля
+rm -rf build/Desktop-Debug && \
+  cmake -S . -B build/Desktop-Debug && \
+  cmake --build build/Desktop-Debug -j
+
+# Очистка от мусора Qt Creator и рабочих файлов
+rm -f *.back *.back1 *.back2 *.back3 *~ points.txt beam.txt
+
+# Проверка, что мусор не в индексе
+git ls-files | grep -E '^(build/|\.qtcreator/)' && echo "FOUND" || echo "clean"
+
+# Обновление переводов
+lupdate . -ts MirrorRoomSimulation_ru_RU.ts
+lrelease MirrorRoomSimulation_ru_RU.ts
+\end{lstlisting}
+
+% ============================================================
+\section{Куда смотреть в первую очередь}
+
+\begin{enumerate}[leftmargin=*]
+    \item \file{main.cpp} — запуск.
+    \item \file{mainwindow.h} — состояние окна.
+    \item \file{mainwindow.cpp} — \code{mousePressEvent} (главный вход
+          пользователя) и \code{paintEvent} (отрисовка).
+    \item \file{frontendoperators.h} — операции над сценой.
+    \item \file{frontendoperators.cpp} — \code{CreatePoint},
+          \code{ConnectPoints}, \code{ChangeMirror}.
+    \item \file{polygon.h} — модель сцены.
+    \item \file{polygon.cpp} — \code{TraceBeam}, отражение.
+    \item \file{mirror.h} — иерархия зеркал.
+    \item \file{mirror.cpp} — пересечения и \code{Draw}.
+    \item Диалоги — по мере необходимости.
+\end{enumerate}
+
+\vspace{1em}
+\hrule
+\vspace{0.4em}
+\noindent\small\textit{Документ написан по факту чтения исходников.
+При изменении структуры обновляйте разделы 2, 3, 9, 10.}
+
+\end{document}
