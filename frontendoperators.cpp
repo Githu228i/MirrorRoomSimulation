@@ -69,42 +69,35 @@ void FrontEndOperators::ChangeMirror(
         Points firstEnd =
             prototype.sides_[0]->getEnd();
 
-        // Сохраняем тип первого зеркала
-        if (dynamic_cast<ConcaveMirror*>(
-                prototype.sides_[0].get()))
+                // Тип первого зеркала берём из диалога
+        switch (data.mirrorType)
         {
-            double radius =
-                prototype.sides_[0]->getRad();
-
-            prototype.sides_[0] =
-                std::make_unique<ConcaveMirror>(
-                    newPoint,
-                    firstEnd,
-                    radius
-                    );
-        }
-        else if (dynamic_cast<ConvexMirror*>(
-                     prototype.sides_[0].get()))
-        {
-            double radius =
-                prototype.sides_[0]->getRad();
-
-            prototype.sides_[0] =
-                std::make_unique<ConvexMirror>(
-                    newPoint,
-                    firstEnd,
-                    radius
-                    );
-        }
-        else
-        {
+        case 0:
             prototype.sides_[0] =
                 std::make_unique<PlaneMirror>(
                     newPoint,
                     firstEnd
                     );
-        }
+            break;
 
+        case 1:
+            prototype.sides_[0] =
+                std::make_unique<ConcaveMirror>(
+                    newPoint,
+                    firstEnd,
+                    data.radius
+                    );
+            break;
+
+        case 2:
+            prototype.sides_[0] =
+                std::make_unique<ConvexMirror>(
+                    newPoint,
+                    firstEnd,
+                    data.radius
+                    );
+            break;
+        }
         // Сохраняем начало последнего зеркала
         Points lastStart =
             prototype.sides_.back()->getStart();

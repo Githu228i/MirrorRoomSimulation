@@ -1,0 +1,91 @@
+{
+	"abstract" : true,
+	"artifacts" : 
+	[
+		{
+			"path" : "/nix/store/h0dk1ba61swy9csvl589fywsgw6r2y35-qt6-dev/bin/lrelease-pro"
+		}
+	],
+	"backtrace" : 8,
+	"backtraceGraph" : 
+	{
+		"commands" : 
+		[
+			"add_executable",
+			"include",
+			"find_package"
+		],
+		"files" : 
+		[
+			"/nix/store/h0dk1ba61swy9csvl589fywsgw6r2y35-qt6-dev/lib/cmake/Qt6LinguistTools/Qt6LinguistToolsVersionlessTargets.cmake",
+			"/nix/store/h0dk1ba61swy9csvl589fywsgw6r2y35-qt6-dev/lib/cmake/Qt6LinguistTools/Qt6LinguistToolsConfig.cmake",
+			"/nix/store/6qkfgq14vwp19v69ciwdrac5yjcrj5qn-qtbase-6.11.2/lib/cmake/Qt6/Qt6Config.cmake",
+			"build/Desktop_Debug/.qtcreator/cmake-helper/maintenance_tool_provider.cmake",
+			"CMakeLists.txt"
+		],
+		"nodes" : 
+		[
+			{
+				"file" : 4
+			},
+			{
+				"command" : 2,
+				"file" : 4,
+				"line" : 12,
+				"parent" : 0
+			},
+			{
+				"command" : 2,
+				"file" : 3,
+				"line" : 254,
+				"parent" : 1
+			},
+			{
+				"file" : 2,
+				"parent" : 2
+			},
+			{
+				"command" : 2,
+				"file" : 2,
+				"line" : 257,
+				"parent" : 3
+			},
+			{
+				"file" : 1,
+				"parent" : 4
+			},
+			{
+				"command" : 1,
+				"file" : 1,
+				"line" : 59,
+				"parent" : 5
+			},
+			{
+				"file" : 0,
+				"parent" : 6
+			},
+			{
+				"command" : 0,
+				"file" : 0,
+				"line" : 6,
+				"parent" : 7
+			}
+		]
+	},
+	"codemodelVersion" : 
+	{
+		"major" : 2,
+		"minor" : 11
+	},
+	"id" : "Qt::lrelease-pro::@6890427a1f51a3e7e1df",
+	"imported" : true,
+	"name" : "Qt::lrelease-pro",
+	"nameOnDisk" : "lrelease-pro",
+	"paths" : 
+	{
+		"build" : ".",
+		"source" : "."
+	},
+	"sources" : [],
+	"type" : "EXECUTABLE"
+}
