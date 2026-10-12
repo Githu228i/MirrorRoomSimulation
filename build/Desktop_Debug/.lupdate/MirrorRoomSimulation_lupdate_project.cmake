@@ -1,0 +1,11 @@
+set(lupdate_project_file "/home/xewhysis/C++/gitprojects/MirrorRoomSimulation/CMakeLists.txt")
+set(lupdate_translations "/home/xewhysis/C++/gitprojects/MirrorRoomSimulation/MirrorRoomSimulation_ru_RU.ts")
+set(lupdate_include_paths "")
+set(lupdate_sources "")
+set(lupdate_subproject_count 1)
+
+set(lupdate_subproject1_source_dir "/home/xewhysis/C++/gitprojects/MirrorRoomSimulation")
+set(lupdate_subproject1_include_paths "/home/xewhysis/C++/gitprojects/MirrorRoomSimulation/build/Desktop_Debug/MirrorRoomSimulation_autogen/include;/usr/include/qt6/QtCore;/usr/include/qt6;/usr/lib/qt6/mkspecs/linux-g++;/usr/include/qt6;/usr/include/qt6/QtWidgets;/usr/include/qt6;/usr/include/qt6/QtGui;/usr/include/qt6;/usr/include;/usr/include;/usr/include")
+set(lupdate_subproject1_sources "/home/xewhysis/C++/gitprojects/MirrorRoomSimulation/build/Desktop_Debug/MirrorRoomSimulation_autogen/mocs_compilation.cpp;main.cpp;mainwindow.cpp;mainwindow.h;mainwindow.ui;mirror.h;mirror.cpp;points.h;points.cpp;frontendoperators.h;frontendoperators.cpp;backendoperators.h;backendoperators.cpp;polygon.h;polygon.cpp;/home/xewhysis/C++/gitprojects/MirrorRoomSimulation/build/Desktop_Debug/.qt/rcc/MirrorRoomSimulation_translations.qrc;/home/xewhysis/C++/gitprojects/MirrorRoomSimulation/build/Desktop_Debug/MirrorRoomSimulation_ru_RU.qm;/home/xewhysis/C++/gitprojects/MirrorRoomSimulation/build/Desktop_Debug/.qt/rcc/qrc_MirrorRoomSimulation_translations.cpp;/home/xewhysis/C++/gitprojects/MirrorRoomSimulation/build/Desktop_Debug/MirrorRoomSimulation_autogen/include/ui_mainwindow.h;/home/xewhysis/C++/gitprojects/MirrorRoomSimulation/build/Desktop_Debug/MirrorRoomSimulation_autogen/timestamp;/home/xewhysis/C++/gitprojects/MirrorRoomSimulation/build/Desktop_Debug/MirrorRoomSimulation_ru_RU.qm.rule;/home/xewhysis/C++/gitprojects/MirrorRoomSimulation/build/Desktop_Debug/.qt/rcc/qrc_MirrorRoomSimulation_translations.cpp.rule;/home/xewhysis/C++/gitprojects/MirrorRoomSimulation/build/Desktop_Debug/MirrorRoomSimulation_autogen/timestamp.rule")
+set(lupdate_subproject1_excluded "")
+set(lupdate_subproject1_autogen_dir "/home/xewhysis/C++/gitprojects/MirrorRoomSimulation/build/Desktop_Debug/MirrorRoomSimulation_autogen")

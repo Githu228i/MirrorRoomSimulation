@@ -1,17 +1,9 @@
 #include "mirror.h"
-
-#include <QPainter>
-#include <QPainterPath>
-
-#include <algorithm>
 #include <cmath>
+#include <algorithm>
 #include <stdexcept>
 #include <vector>
 
-
-// ============================================================
-// Вспомогательные функции пересечений
-// ============================================================
 namespace {
     constexpr double EPS       = 1e-9;
     constexpr double POINT_EPS = 1e-6;
@@ -153,11 +145,10 @@ namespace {
 
 
 // ============================================================
-// Mirror
+// Mirror (базовая реализация — используется как «общее» зеркало)
 // ============================================================
 Mirror::Mirror(Points st, Points end, double rad)
-    : start_(st), end_(end), rad_(rad)
-{
+    : start_(st), end_(end), rad_(rad) {
     double d = st.Dist(end);
     if (!(d >= POINT_EPS))
         throw std::invalid_argument("Mirror: start and end coincide");
@@ -166,42 +157,17 @@ Mirror::Mirror(Points st, Points end, double rad)
         throw std::invalid_argument("Mirror: |radius| is less than half of the chord");
 }
 
-Mirror::Mirror(Points st, Points end)
-    : Mirror(st, end, 0.0)
-{
-}
+double Mirror::getRad()   const { return rad_; }
+Points Mirror::getStart() const { return start_; }
+Points Mirror::getEnd()   const { return end_; }
+double Mirror::Dist()     const { return start_.Dist(end_); }
 
-double Mirror::getRad()    const { return rad_; }
-double Mirror::getRadius() const { return std::abs(rad_); }
-Points Mirror::getStart()  const { return start_; }
-Points Mirror::getEnd()    const { return end_; }
-double Mirror::Dist()      const { return start_.Dist(end_); }
-
-bool Mirror::isFlat() const
-{
+bool Mirror::isFlat() const {
     double r = std::abs(rad_);
     return !(r >= EPS) || r > FLAT_R;
 }
 
-/*
- * Центр окружности со стороной, заданной знаком rad:
- * rad > 0 -> слева от start -> end, rad < 0 -> справа.
- */
-Points Mirror::CircleCenter() const
-{
-    return CircleCenter(rad_ >= 0);
-}
-
-/*
- * Центр окружности с явно заданной стороной.
- *
- * leftSide = true  -> центр слева от направления start -> end
- * leftSide = false -> справа.
- *
- * Для отрезка возвращается середина хорды.
- */
-Points Mirror::CircleCenter(bool leftSide) const
-{
+Points Mirror::CircleCenter() const {
     Points mid((start_.getX() + end_.getX()) / 2.0,
                (start_.getY() + end_.getY()) / 2.0);
     if (isFlat()) return mid;
@@ -211,17 +177,15 @@ Points Mirror::CircleCenter(bool leftSide) const
     double half = d / 2.0;
     double h = std::sqrt(std::max(0.0, (r - half) * (r + half)));
 
-    // Левая нормаль к start -> end: (-dy, dx)
     double perpX = -(end_.getY() - start_.getY()) / d;
     double perpY =  (end_.getX() - start_.getX()) / d;
-    double sign = leftSide ? 1.0 : -1.0;
+    double sign = (rad_ >= 0 ? 1.0 : -1.0);
 
     return Points(mid.getX() + sign * h * perpX,
                   mid.getY() + sign * h * perpY);
 }
 
-bool Mirror::flatPointOnArc(const Points& p) const
-{
+bool Mirror::flatPointOnArc(const Points& p) const {
     double dx = end_.getX() - start_.getX();
     double dy = end_.getY() - start_.getY();
     double d = std::sqrt(dx * dx + dy * dy);
@@ -233,8 +197,7 @@ bool Mirror::flatPointOnArc(const Points& p) const
     return t >= -tol && t <= 1.0 + tol;
 }
 
-bool Mirror::arcPointOnArc(const Points& p, const Points& center) const
-{
+bool Mirror::arcPointOnArc(const Points& p, const Points& center) const {
     double r = std::abs(rad_);
     if (std::abs(p.Dist(center) - r) > ArcTol(r)) return false;
 
@@ -251,14 +214,12 @@ bool Mirror::arcPointOnArc(const Points& p, const Points& center) const
     return (p.getX() - mx) * nx + (p.getY() - my) * ny >= -POINT_EPS;
 }
 
-bool Mirror::PointOnArc(const Points& p, const Points& center) const
-{
+bool Mirror::PointOnArc(const Points& p, const Points& center) const {
     if (isFlat()) return flatPointOnArc(p);
     return arcPointOnArc(p, center);
 }
 
-std::vector<Points> Mirror::Intersections(const Mirror& other) const
-{
+std::vector<Points> Mirror::Intersections(const Mirror& other) const {
     std::vector<Points> result;
     bool f1 = isFlat(), f2 = other.isFlat();
 
@@ -274,13 +235,11 @@ std::vector<Points> Mirror::Intersections(const Mirror& other) const
     return result;
 }
 
-bool Mirror::Touches(const Mirror& other) const
-{
+bool Mirror::Touches(const Mirror& other) const {
     return !Intersections(other).empty();
 }
 
-bool Mirror::Crossing(const Mirror& other) const
-{
+bool Mirror::Crossing(const Mirror& other) const {
     std::vector<Points> pts = Intersections(other);
     if (pts.empty()) return false;
     if (pts.size() >= 2) return true;
@@ -291,160 +250,103 @@ bool Mirror::Crossing(const Mirror& other) const
 
 
 // ============================================================
-// Наследники: конструкторы
+// ConvexMirror — всегда дуга со знаком + (кроме «огромного» радиуса)
 // ============================================================
-NotPlaneMirror::NotPlaneMirror(
-    Points st,
-    Points end,
-    double rad
-    )
-    : Mirror(st, end, rad)
-{
+ConvexMirror::ConvexMirror(Points st, Points end, double rad)
+    : Mirror(st, end, std::abs(rad)) {}
+
+bool ConvexMirror::isFlat() const {
+    // Огромный радиус трактуем как отрезок — как в базовом классе.
+    return Mirror::isFlat();
 }
 
-ConvexMirror::ConvexMirror(
-    Points st,
-    Points end,
-    double rad
-    )
-    : NotPlaneMirror(st, end, std::abs(rad))
-{
+Points ConvexMirror::CircleCenter() const {
+    return Mirror::CircleCenter();
 }
 
-ConcaveMirror::ConcaveMirror(
-    Points st,
-    Points end,
-    double rad
-    )
-    : NotPlaneMirror(st, end, -std::abs(rad))
-{
+bool ConvexMirror::PointOnArc(const Points& p, const Points& center) const {
+    if (isFlat()) return flatPointOnArc(p);
+    return arcPointOnArc(p, center);
 }
 
-PlaneMirror::PlaneMirror(
-    Points st,
-    Points end
-    )
-    : Mirror(st, end, 0.0)
-{
+std::vector<Points> ConvexMirror::Intersections(const Mirror& other) const {
+    std::vector<Points> result;
+    bool f1 = isFlat(), f2 = other.isFlat();
+
+    if (f1 && f2) {
+        IntersectSegments(start_, end_, other.getStart(), other.getEnd(), result);
+    } else if (f1) {
+        IntersectSegmentArc(start_, end_, other, result);
+    } else if (f2) {
+        IntersectSegmentArc(other.getStart(), other.getEnd(), *this, result);
+    } else {
+        IntersectArcs(*this, other, result);
+    }
+    return result;
 }
 
-bool PlaneMirror::isFlat() const
-{
+
+// ============================================================
+// ConcaveMirror — всегда дуга со знаком −
+// ============================================================
+ConcaveMirror::ConcaveMirror(Points st, Points end, double rad)
+    : Mirror(st, end, -std::abs(rad)) {}
+
+bool ConcaveMirror::isFlat() const {
+    return Mirror::isFlat();
+}
+
+Points ConcaveMirror::CircleCenter() const {
+    return Mirror::CircleCenter();
+}
+
+bool ConcaveMirror::PointOnArc(const Points& p, const Points& center) const {
+    if (isFlat()) return flatPointOnArc(p);
+    return arcPointOnArc(p, center);
+}
+
+std::vector<Points> ConcaveMirror::Intersections(const Mirror& other) const {
+    std::vector<Points> result;
+    bool f1 = isFlat(), f2 = other.isFlat();
+
+    if (f1 && f2) {
+        IntersectSegments(start_, end_, other.getStart(), other.getEnd(), result);
+    } else if (f1) {
+        IntersectSegmentArc(start_, end_, other, result);
+    } else if (f2) {
+        IntersectSegmentArc(other.getStart(), other.getEnd(), *this, result);
+    } else {
+        IntersectArcs(*this, other, result);
+    }
+    return result;
+}
+
+
+// ============================================================
+// PlaneMirror — всегда отрезок
+// ============================================================
+PlaneMirror::PlaneMirror(Points st, Points end)
+    : Mirror(st, end, 0.0) {}
+
+bool PlaneMirror::isFlat() const {
     return true;
 }
 
+Points PlaneMirror::CircleCenter() const {
+    return Points((start_.getX() + end_.getX()) / 2.0,
+                  (start_.getY() + end_.getY()) / 2.0);
+}
 
-// ============================================================
-// Рисование
-// ============================================================
+bool PlaneMirror::PointOnArc(const Points& p, const Points& /*center*/) const {
+    return flatPointOnArc(p);
+}
 
-/*
- * Рисование круглой дуги.
- *
- * centerLeft:
- *   true  -> центр окружности слева от start -> end
- *   false -> справа.
- */
-static void drawCircularArc(
-    QPainter& painter,
-    const Mirror& mirror,
-    bool centerLeft
-    )
-{
-    const double x1 = mirror.getStart().getX();
-    const double y1 = mirror.getStart().getY();
-    const double x2 = mirror.getEnd().getX();
-    const double y2 = mirror.getEnd().getY();
-
-    // Отрезок (rad == 0 или огромный радиус)
-    if (mirror.isFlat())
-    {
-        painter.drawLine(QPointF(x1, y1), QPointF(x2, y2));
-        return;
+std::vector<Points> PlaneMirror::Intersections(const Mirror& other) const {
+    std::vector<Points> result;
+    if (other.isFlat()) {
+        IntersectSegments(start_, end_, other.getStart(), other.getEnd(), result);
+    } else {
+        IntersectSegmentArc(start_, end_, other, result);
     }
-
-    const double pi = 3.14159265358979323846;
-
-    const Points center = mirror.CircleCenter(centerLeft);
-    const double cx = center.getX();
-    const double cy = center.getY();
-    const double radius = mirror.getRadius();
-
-    const double startAngle = std::atan2(y1 - cy, x1 - cx);
-    const double endAngle   = std::atan2(y2 - cy, x2 - cx);
-
-    /*
-     * Величина МЕНЬШЕЙ дуги, нормализованная в [-pi; pi].
-     * Знак определяется стороной центра: при центре слева
-     * обход start -> end идёт в положительном направлении
-     * atan2, при центре справа - в отрицательном.
-     */
-    double delta = endAngle - startAngle;
-
-    while (delta > pi)
-        delta -= 2.0 * pi;
-
-    while (delta < -pi)
-        delta += 2.0 * pi;
-
-    delta = std::abs(delta) * (centerLeft ? 1.0 : -1.0);
-
-    const QRectF rect(
-        cx - radius,
-        cy - radius,
-        2.0 * radius,
-        2.0 * radius
-        );
-
-    /*
-     * Qt: углы в 1/16 градуса, положительное направление -
-     * против часовой стрелки (ось Y экрана направлена вниз,
-     * поэтому знак меняется).
-     */
-    const int start = qRound(-startAngle * 180.0 / pi * 16.0);
-    const int span  = qRound(-delta      * 180.0 / pi * 16.0);
-
-    painter.drawArc(rect, start, span);
-}
-
-
-/*
- * Обычное плоское зеркало.
- */
-void PlaneMirror::Draw(
-    QPainter& painter,
-    bool insideOnLeft
-    ) const
-{
-    Q_UNUSED(insideOnLeft);
-
-    painter.drawLine(
-        QPointF(start_.getX(), start_.getY()),
-        QPointF(end_.getX(), end_.getY())
-        );
-}
-
-
-/*
- * ВЫПУКЛОЕ зеркало: центр окружности внутри полигона.
- */
-void ConvexMirror::Draw(
-    QPainter& painter,
-    bool insideOnLeft
-    ) const
-{
-    drawCircularArc(painter, *this, insideOnLeft);
-}
-
-
-/*
- * ВОГНУТОЕ зеркало: центр окружности снаружи полигона,
- * дуга выгибается внутрь комнаты.
- */
-void ConcaveMirror::Draw(
-    QPainter& painter,
-    bool insideOnLeft
-    ) const
-{
-    drawCircularArc(painter, *this, !insideOnLeft);
+    return result;
 }

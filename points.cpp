@@ -12,7 +12,7 @@ double Points::Dist(const Points& other) const {
     return std::sqrt(diffx * diffx + diffy * diffy);
 }
 
-Beam::Beam(double x, double y, double angle) : Points(x, y), angle_(angle) {}
+Beam::Beam(double x, double y, double angle): Points(x, y), angle_(angle) {}
 
 double Beam::getA() const { return angle_; }
 
