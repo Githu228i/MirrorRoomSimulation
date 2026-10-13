@@ -257,6 +257,41 @@ bool Mirror::PointOnArc(const Points& p, const Points& center) const
     return arcPointOnArc(p, center);
 }
 
+Points Mirror::ClosestPoint(const Points& p, double& dist) const
+{
+    if (isFlat()) {
+        double dx = end_.getX() - start_.getX();
+        double dy = end_.getY() - start_.getY();
+        double len2 = dx * dx + dy * dy;
+        double t = ((p.getX() - start_.getX()) * dx +
+                    (p.getY() - start_.getY()) * dy) / len2;
+        t = std::clamp(t, 0.0, 1.0);
+        Points q(start_.getX() + t * dx, start_.getY() + t * dy);
+        dist = p.Dist(q);
+        return q;
+    }
+
+    Points c = CircleCenter();
+    double r = getRadius();
+    double vx = p.getX() - c.getX();
+    double vy = p.getY() - c.getY();
+    double len = std::sqrt(vx * vx + vy * vy);
+
+    if (len > EPS) {
+        Points q(c.getX() + vx / len * r, c.getY() + vy / len * r);
+        if (PointOnArc(q, c)) {
+            dist = std::abs(len - r);
+            return q;
+        }
+    }
+
+    double ds = p.Dist(start_);
+    double de = p.Dist(end_);
+    if (ds <= de) { dist = ds; return start_; }
+    dist = de;
+    return end_;
+}
+
 std::vector<Points> Mirror::Intersections(const Mirror& other) const
 {
     std::vector<Points> result;

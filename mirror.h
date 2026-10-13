@@ -37,6 +37,8 @@ public:
 
     virtual bool PointOnArc(const Points& p, const Points& center) const;
 
+    Points ClosestPoint(const Points& p, double& dist) const;
+
     // ---- Пересечения ----
     virtual std::vector<Points> Intersections(const Mirror& other) const;
     virtual bool Touches(const Mirror& other) const;

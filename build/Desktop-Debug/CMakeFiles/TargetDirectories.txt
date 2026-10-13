@@ -1,0 +1,14 @@
+/home/vladimir/MirrorRoomSimulation/build/Desktop-Debug/CMakeFiles/MirrorRoomSimulation.dir
+/home/vladimir/MirrorRoomSimulation/build/Desktop-Debug/CMakeFiles/MirrorRoomSimulation_lupdate.dir
+/home/vladimir/MirrorRoomSimulation/build/Desktop-Debug/CMakeFiles/update_translations.dir
+/home/vladimir/MirrorRoomSimulation/build/Desktop-Debug/CMakeFiles/MirrorRoomSimulation_lrelease.dir
+/home/vladimir/MirrorRoomSimulation/build/Desktop-Debug/CMakeFiles/release_translations.dir
+/home/vladimir/MirrorRoomSimulation/build/Desktop-Debug/CMakeFiles/MirrorRoomSimulation_other_files.dir
+/home/vladimir/MirrorRoomSimulation/build/Desktop-Debug/CMakeFiles/edit_cache.dir
+/home/vladimir/MirrorRoomSimulation/build/Desktop-Debug/CMakeFiles/rebuild_cache.dir
+/home/vladimir/MirrorRoomSimulation/build/Desktop-Debug/CMakeFiles/list_install_components.dir
+/home/vladimir/MirrorRoomSimulation/build/Desktop-Debug/CMakeFiles/install.dir
+/home/vladimir/MirrorRoomSimulation/build/Desktop-Debug/CMakeFiles/install/local.dir
+/home/vladimir/MirrorRoomSimulation/build/Desktop-Debug/CMakeFiles/install/strip.dir
+/home/vladimir/MirrorRoomSimulation/build/Desktop-Debug/CMakeFiles/MirrorRoomSimulation_autogen_timestamp_deps.dir
+/home/vladimir/MirrorRoomSimulation/build/Desktop-Debug/CMakeFiles/MirrorRoomSimulation_autogen.dir
