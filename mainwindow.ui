@@ -91,9 +91,9 @@
     <property name="geometry">
      <rect>
       <x>1620</x>
-      <y>-10</y>
+      <y>0</y>
       <width>401</width>
-      <height>1181</height>
+      <height>1011</height>
      </rect>
     </property>
     <property name="widgetResizable">
@@ -105,7 +105,7 @@
        <x>0</x>
        <y>0</y>
        <width>399</width>
-       <height>1179</height>
+       <height>1009</height>
       </rect>
      </property>
     </widget>
@@ -124,6 +124,40 @@
     </property>
     <property name="orientation">
      <enum>Qt::Vertical</enum>
+    </property>
+   </widget>
+   <widget class="Line" name="line_3">
+    <property name="geometry">
+     <rect>
+      <x>1620</x>
+      <y>1010</y>
+      <width>381</width>
+      <height>20</height>
+     </rect>
+    </property>
+    <property name="font">
+     <font>
+      <pointsize>10</pointsize>
+     </font>
+    </property>
+    <property name="lineWidth">
+     <number>10</number>
+    </property>
+    <property name="orientation">
+     <enum>Qt::Horizontal</enum>
+    </property>
+   </widget>
+   <widget class="QPushButton" name="pushButton_5">
+    <property name="geometry">
+     <rect>
+      <x>1620</x>
+      <y>1050</y>
+      <width>371</width>
+      <height>101</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>PushButton</string>
     </property>
    </widget>
   </widget>

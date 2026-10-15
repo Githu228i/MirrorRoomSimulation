@@ -33,6 +33,8 @@ public:
     QScrollArea *chatScrollArea;
     QWidget *scrollAreaWidgetContents;
     QFrame *line_2;
+    QFrame *line_3;
+    QPushButton *pushButton_5;
     QMenuBar *menubar;
     QStatusBar *statusbar;
 
@@ -66,11 +68,11 @@ public:
         pushButton_4->setGeometry(QRect(1200, 1050, 371, 101));
         chatScrollArea = new QScrollArea(centralwidget);
         chatScrollArea->setObjectName("chatScrollArea");
-        chatScrollArea->setGeometry(QRect(1620, -10, 401, 1181));
+        chatScrollArea->setGeometry(QRect(1620, 0, 401, 1011));
         chatScrollArea->setWidgetResizable(true);
         scrollAreaWidgetContents = new QWidget();
         scrollAreaWidgetContents->setObjectName("scrollAreaWidgetContents");
-        scrollAreaWidgetContents->setGeometry(QRect(0, 0, 399, 1179));
+        scrollAreaWidgetContents->setGeometry(QRect(0, 0, 399, 1009));
         chatScrollArea->setWidget(scrollAreaWidgetContents);
         line_2 = new QFrame(centralwidget);
         line_2->setObjectName("line_2");
@@ -78,6 +80,16 @@ public:
         line_2->setLineWidth(10);
         line_2->setFrameShape(QFrame::VLine);
         line_2->setFrameShadow(QFrame::Sunken);
+        line_3 = new QFrame(centralwidget);
+        line_3->setObjectName("line_3");
+        line_3->setGeometry(QRect(1620, 1010, 381, 20));
+        line_3->setFont(font);
+        line_3->setLineWidth(10);
+        line_3->setFrameShape(QFrame::HLine);
+        line_3->setFrameShadow(QFrame::Sunken);
+        pushButton_5 = new QPushButton(centralwidget);
+        pushButton_5->setObjectName("pushButton_5");
+        pushButton_5->setGeometry(QRect(1620, 1050, 371, 101));
         MainWindow->setCentralWidget(centralwidget);
         menubar = new QMenuBar(MainWindow);
         menubar->setObjectName("menubar");
@@ -99,6 +111,7 @@ public:
         pushButton_2->setText(QCoreApplication::translate("MainWindow", "PushButton", nullptr));
         pushButton_3->setText(QCoreApplication::translate("MainWindow", "PushButton", nullptr));
         pushButton_4->setText(QCoreApplication::translate("MainWindow", "PushButton", nullptr));
+        pushButton_5->setText(QCoreApplication::translate("MainWindow", "PushButton", nullptr));
     } // retranslateUi
 
 };

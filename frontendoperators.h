@@ -7,6 +7,19 @@
 #include "changepointdialog.h"
 
 #include <vector>
+#include <functional>
+
+// Допустимая рабочая область и пороги (в пикселях)
+namespace Limits {
+constexpr double MinX = 0.0;
+constexpr double MaxX = 1580.0;
+constexpr double MinY = 0.0;
+constexpr double MaxY = 1000.0;
+constexpr double MinPointDist = 10.0;   // ближе - "слишком близко"
+}
+
+// Уровень сообщения для служебного окна
+enum class NoteLevel { Info, Warning, Error };
 
 class FrontEndOperators
 {
@@ -20,15 +33,22 @@ public:
     void Binding();
 
     // Пошаговая трассировка луча
-    void NextReflection();   // следующая точка отражения
+    bool NextReflection();   // следующая точка отражения (false - не удалось)
     void ResetTrace();       // начать путь заново (история = только старт)
+
+    // Сюда FrontEndOperators шлёт сообщения для служебного окна
+    std::function<void(NoteLevel, const QString &)> notify;
 
     friend class MainWindow;
 
 private:
+    void Notify(NoteLevel level, const QString &text) const;
+
     Polygon prototype;
     Beam tempBeam_;
     std::vector<Points> history_;   // стартовая точка + точки отражений
+    std::vector<Beam> states_;      // состояния луча (точка + угол): старт + после каждого отражения
+    bool looped_ = false;           // ход луча повторился - луч зациклился
 };
 
 #endif // FRONTENDOPERATORS_H
