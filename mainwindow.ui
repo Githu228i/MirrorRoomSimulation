@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>2000</width>
-    <height>1200</height>
+    <height>1300</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -116,7 +116,7 @@
       <x>1600</x>
       <y>0</y>
       <width>21</width>
-      <height>1161</height>
+      <height>1271</height>
      </rect>
     </property>
     <property name="lineWidth">
@@ -151,13 +151,26 @@
     <property name="geometry">
      <rect>
       <x>1620</x>
-      <y>1050</y>
+      <y>1100</y>
       <width>371</width>
       <height>101</height>
      </rect>
     </property>
     <property name="text">
      <string>PushButton</string>
+    </property>
+   </widget>
+   <widget class="QSlider" name="horizontalSlider">
+    <property name="geometry">
+     <rect>
+      <x>89</x>
+      <y>1190</y>
+      <width>521</width>
+      <height>20</height>
+     </rect>
+    </property>
+    <property name="orientation">
+     <enum>Qt::Horizontal</enum>
     </property>
    </widget>
   </widget>

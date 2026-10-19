@@ -72,16 +72,75 @@ QString TypeName(const Mirror &m)
     }
 }
 
+// Точка зеркала по параметру t от 0 (начало) до 1 (конец)
+Points PointAt(const Mirror &m, double t)
+{
+    const Points s = m.getStart();
+    const Points e = m.getEnd();
+
+    if (m.isFlat())
+        return Points(s.getX() + t * (e.getX() - s.getX()),
+                      s.getY() + t * (e.getY() - s.getY()));
+
+    const double pi = 3.14159265358979323846;
+    const Points c = m.CircleCenter();
+    const double r = m.getRadius();
+
+    const double a0 = std::atan2(s.getY() - c.getY(), s.getX() - c.getX());
+    const double a1 = std::atan2(e.getY() - c.getY(), e.getX() - c.getX());
+
+    // Меньшая дуга; центр слева от хорды - обход против часовой, справа - по часовой
+    double delta = std::abs(std::remainder(a1 - a0, 2.0 * pi));
+    if (m.getRad() < 0) delta = -delta;
+
+    const double ang = a0 + t * delta;
+    return Points(c.getX() + r * std::cos(ang), c.getY() + r * std::sin(ang));
+}
+
+// Наименьшее расстояние между двумя зеркалами: точки одного берутся
+// с шагом, до другого считается точное расстояние (концы входят в выборку)
+double WallDistance(const Mirror &a, const Mirror &b)
+{
+    const int N = 120;
+    double best = 1e18;
+
+    auto scan = [&](const Mirror &from, const Mirror &to) {
+        for (int k = 0; k <= N; ++k) {
+            double d = 0.0;
+            to.ClosestPoint(PointAt(from, static_cast<double>(k) / N), d);
+            best = std::min(best, d);
+        }
+    };
+
+    scan(a, b);
+    scan(b, a);
+    return best;
+}
+
+// Соседние стены first -> second (конец first = начало second).
+// Они не должны слипаться: дальние концы не ближе толщины линии к соседней стене.
+bool AdjacentTooClose(const Mirror &first, const Mirror &second)
+{
+    double d = 0.0;
+    second.ClosestPoint(first.getStart(), d);
+    if (d < Style::WallWidth) return true;
+
+    first.ClosestPoint(second.getEnd(), d);
+    return d < Style::WallWidth;
+}
+
+enum class WallCheck { Ok, Cross, TooClose };
+
 // Проверка набора стен: стены не должны пересекаться и касаться друг друга
 // нигде, кроме общей вершины соседних стен (как Polygon::Check, но работает
-// и для разомкнутой цепочки). only - индексы изменённых стен: проверяются
-// только пары с их участием (пусто - все пары). При ошибке в *a и *b
-// возвращаются индексы пересекающихся стен (a < b).
-bool WallsValid(const std::vector<const Mirror *> &w,
-                bool closed,
-                const std::vector<int> &only,
-                int *a,
-                int *b)
+// и для разомкнутой цепочки), а линии толщиной Style::WallWidth не должны
+// сливаться. only - индексы изменённых стен: проверяются только пары с их
+// участием (пусто - все пары). При ошибке в *a и *b - индексы стен (a < b).
+WallCheck CheckWalls(const std::vector<const Mirror *> &w,
+                     bool closed,
+                     const std::vector<int> &only,
+                     int *a,
+                     int *b)
 {
     const int n = static_cast<int>(w.size());
 
@@ -94,9 +153,13 @@ bool WallsValid(const std::vector<const Mirror *> &w,
         for (int j = i + 1; j < n; ++j) {
             if (!involved(i) && !involved(j)) continue;
 
+            const bool wrap = closed && i == 0 && j == n - 1;
+            const bool adjacent = (j == i + 1) || wrap;
+
+            // 1. Геометрические пересечения (кроме общей вершины соседей)
             std::vector<Points> allowed;
-            if (j == i + 1)                     allowed.push_back(w[i]->getEnd());
-            if (closed && i == 0 && j == n - 1) allowed.push_back(w[j]->getEnd());
+            if (j == i + 1) allowed.push_back(w[i]->getEnd());
+            if (wrap)       allowed.push_back(w[j]->getEnd());
 
             for (const Points &p : w[i]->Intersections(*w[j])) {
                 bool ok = false;
@@ -106,12 +169,28 @@ bool WallsValid(const std::vector<const Mirror *> &w,
                 if (!ok) {
                     if (a) *a = i;
                     if (b) *b = j;
-                    return false;
+                    return WallCheck::Cross;
                 }
+            }
+
+            // 2. Толщина линий
+            bool tooClose;
+            if (adjacent) {
+                const Mirror &first  = wrap ? *w[j] : *w[i];
+                const Mirror &second = wrap ? *w[i] : *w[j];
+                tooClose = AdjacentTooClose(first, second);
+            } else {
+                tooClose = WallDistance(*w[i], *w[j]) < Style::WallWidth;
+            }
+
+            if (tooClose) {
+                if (a) *a = i;
+                if (b) *b = j;
+                return WallCheck::TooClose;
             }
         }
     }
-    return true;
+    return WallCheck::Ok;
 }
 
 } // namespace
@@ -154,10 +233,19 @@ void FrontEndOperators::CreatePoint(double x, double y) {
         w.push_back(&wall);
 
         int a = 0, b = 0;
-        if (!WallsValid(w, false, {static_cast<int>(w.size()) - 1}, &a, &b)) {
+        const WallCheck res = CheckWalls(w, false, {static_cast<int>(w.size()) - 1}, &a, &b);
+        if (res == WallCheck::Cross) {
             Notify(NoteLevel::Error,
                    QString("Нельзя поставить точку: новая стена пересекает или касается стены %1.")
                        .arg(a + 1));
+            return;
+        }
+        if (res == WallCheck::TooClose) {
+            Notify(NoteLevel::Error,
+                   QString("Нельзя поставить точку: новая стена слишком близко к стене %1 "
+                           "(ближе толщины линии, %2 пикселей).")
+                       .arg(a + 1)
+                       .arg(Style::WallWidth));
             return;
         }
 
@@ -203,10 +291,19 @@ void FrontEndOperators::ConnectPoints(int num)
         w.push_back(&closing);
 
         int a = 0, b = 0;
-        if (!WallsValid(w, true, {static_cast<int>(w.size()) - 1}, &a, &b)) {
+        const WallCheck res = CheckWalls(w, true, {static_cast<int>(w.size()) - 1}, &a, &b);
+        if (res == WallCheck::Cross) {
             Notify(NoteLevel::Error,
                    QString("Нельзя замкнуть комнату: замыкающая стена пересекает или касается стены %1.")
                        .arg(a + num + 1));
+            return;
+        }
+        if (res == WallCheck::TooClose) {
+            Notify(NoteLevel::Error,
+                   QString("Нельзя замкнуть комнату: замыкающая стена слишком близко к стене %1 "
+                           "(ближе толщины линии, %2 пикселей).")
+                       .arg(a + num + 1)
+                       .arg(Style::WallWidth));
             return;
         }
     }
@@ -385,12 +482,23 @@ void FrontEndOperators::ChangeMirror(
         }
 
         int a = 0, b = 0;
-        if (!WallsValid(w, cycled, changed, &a, &b)) {
+        const WallCheck res = CheckWalls(w, cycled, changed, &a, &b);
+        if (res == WallCheck::Cross) {
             Notify(NoteLevel::Error,
-                   QString("Изменение точки %1 отменено: зеркало %2 начнёт пересекаться или касаться зеркала %3.")
+                   QString("Изменение точки %1 отменено: зеркала %2 и %3 начнут пересекаться или касаться.")
                        .arg(pointNo)
                        .arg(a + 1)
                        .arg(b + 1));
+            return;
+        }
+        if (res == WallCheck::TooClose) {
+            Notify(NoteLevel::Error,
+                   QString("Изменение точки %1 отменено: зеркала %2 и %3 окажутся слишком близко "
+                           "(ближе толщины линии, %4 пикселей).")
+                       .arg(pointNo)
+                       .arg(a + 1)
+                       .arg(b + 1)
+                       .arg(Style::WallWidth));
             return;
         }
     }

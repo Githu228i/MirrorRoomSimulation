@@ -11,13 +11,14 @@
 #include <QVBoxLayout>
 #include <QScrollBar>
 #include <QTime>
+#include <QVariantAnimation>
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
     , ui(new Ui::MainWindow)
 {
     ui->setupUi(this);
-    setFixedSize(2000,1200);
+    setFixedSize(2000,1300);
 
     // ---- Служебное окно справа (чат системы) ----
     ui->chatScrollArea->setWidgetResizable(true);
@@ -77,6 +78,20 @@ MainWindow::MainWindow(QWidget *parent)
     connect(chatBar, &QScrollBar::rangeChanged, this,
             [chatBar](int, int) { chatBar->setValue(0); });
 
+    // Анимация одного отражения: отрезок растёт от 0 до полной длины
+    reflectAnim_ = new QVariantAnimation(this);
+    reflectAnim_->setStartValue(0.0);
+    reflectAnim_->setEndValue(1.0);
+    reflectAnim_->setEasingCurve(QEasingCurve::Linear);
+
+    connect(reflectAnim_, &QVariantAnimation::valueChanged, this,
+            [this](const QVariant &v) {
+                animProgress_ = v.toDouble();
+                update();
+            });
+    connect(reflectAnim_, &QVariantAnimation::finished,
+            this, &MainWindow::FinishReflection);
+
     // Сообщения от FrontEndOperators (ошибки ввода, отражения и т.д.) идут в чат
     polygonCreator.notify = [this](NoteLevel level, const QString &text) {
         MsgType t = MsgType::Info;
@@ -84,7 +99,10 @@ MainWindow::MainWindow(QWidget *parent)
             t = MsgType::Warning;
         else if (level == NoteLevel::Error)
             t = MsgType::Error;
-        AddMessage(text, t);
+        if (bufferNotes_)
+            pendingNotes_.push_back({t, text});   // покажем в конце анимации
+        else
+            AddMessage(text, t);
     };
 
     AddMessage(
@@ -103,6 +121,10 @@ MainWindow::MainWindow(QWidget *parent)
 
     ui->pushButton_3->setText("Следующее отражение");
 
+    // Кнопка 4 пока без действия, но во время анимации её нажатия тоже игнорируются
+    connect(ui->pushButton_4, &QPushButton::clicked,
+            this, [this]() { IgnoreDuringAnimation(); });
+
     ui->pushButton->setText("Откатить точку");
     ui->pushButton_2->setText("Начать симуляцию");
     ui->pushButton_3->setVisible(false);
@@ -116,20 +138,23 @@ MainWindow::~MainWindow()
     delete ui;
 }
 
-// Доступность кнопок:
+// Доступность кнопок (недоступные приглушаются):
 //  - в режиме выбора точки луча недоступны кнопки 2, 3, 4;
-//  - если луч зациклился, недоступны кнопки 3 и 4.
-// Недоступные кнопки приглушаются.
+//  - если луч зациклился, недоступны кнопки 3 и 4;
+//  - во время анимации все кнопки приглушены, но остаются нажимаемыми:
+//    нажатие игнорируется с сообщением в чат.
 void MainWindow::UpdateButtons()
 {
     const bool picking = !Redacting && Beaming;
     const bool looped = polygonCreator.looped_;
+    const bool busy = animating_;
 
-    auto setActive = [](QPushButton *b, bool active)
+    // enabled - принимает ли кнопка нажатия, dim - приглушена ли она
+    auto setState = [](QPushButton *b, bool enabled, bool dim)
     {
-        b->setEnabled(active);
+        b->setEnabled(enabled);
 
-        if (!active)
+        if (dim)
         {
             auto *effect = new QGraphicsOpacityEffect(b);
             effect->setOpacity(0.35);
@@ -141,9 +166,10 @@ void MainWindow::UpdateButtons()
         }
     };
 
-    setActive(ui->pushButton_2, !picking);
-    setActive(ui->pushButton_3, !picking && !looped);
-    setActive(ui->pushButton_4, !picking && !looped);
+    setState(ui->pushButton,   true,                    busy);
+    setState(ui->pushButton_2, !picking,                picking || busy);
+    setState(ui->pushButton_3, !picking && !looped,     picking || looped || busy);
+    setState(ui->pushButton_4, !picking && !looped,     picking || looped || busy);
 }
 
 // Служебное окно: добавляет сообщение-"пузырь" сверху, старые сдвигаются вниз
@@ -194,6 +220,9 @@ void MainWindow::AddMessage(const QString &text, MsgType type)
 }
 
 void MainWindow::FirstButClicked() {
+    if (IgnoreDuringAnimation())
+        return;
+
     if (Redacting) {
         polygonCreator.DeleteLast();
         update();
@@ -221,13 +250,17 @@ void MainWindow::FirstButClicked() {
 }
 
 void MainWindow::SecondButClicked() {
+    if (IgnoreDuringAnimation())
+        return;
+
     if (Redacting) {
         auto &poly = polygonCreator.prototype;
 
         if (poly.sides_.size() <= 2) {
             AddMessage(
                 "Нельзя начать симуляцию: слишком мало стен "
-                "(нужно больше двух стен до замыкания).",
+                "(нужно больше двух стен до замыкания). Поставьте ещё точки "
+                "или кликните по первой точке и выберите «Подключить».",
                 MsgType::Error);
             return;
         }
@@ -309,16 +342,70 @@ void MainWindow::SecondButClicked() {
 }
 
 void MainWindow::ThirdButClicked() {
+    if (IgnoreDuringAnimation())
+        return;
+
     if (Redacting || Beaming || !polygonCreator.prototype.isBeamSet_)
         return;
 
-    polygonCreator.NextReflection();
+    // Сообщения о шаге (точка отражения, зацикливание) покажем в конце анимации
+    pendingNotes_.clear();
+    bufferNotes_ = true;
+
+    if (!polygonCreator.NextReflection())
+    {
+        // Шаг не получился: сообщение об ошибке показываем сразу
+        FlushPendingNotes();
+        return;
+    }
+
+    // Точка отражения посчитана, теперь отрезок до неё "дорисовывается" анимацией
+    animating_ = true;
+    animProgress_ = 0.0;
+    UpdateButtons();   // на время анимации кнопки тускнеют
+    reflectAnim_->setDuration(reflectionAnimMs_);
+    reflectAnim_->start();
+    update();
+}
+
+// Если идёт анимация - сообщает об этом в чат, и вызывающий код должен выйти
+bool MainWindow::IgnoreDuringAnimation()
+{
+    if (!animating_)
+        return false;
+
+    AddMessage(
+        "Нельзя редактировать, пока идёт симуляция: "
+        "дождитесь конца анимации отражения.",
+        MsgType::Warning);
+    return true;
+}
+
+void MainWindow::FinishReflection()
+{
+    animating_ = false;
+    animProgress_ = 1.0;
+
+    FlushPendingNotes();
     UpdateButtons();   // если луч зациклился - кнопки 3 и 4 гаснут
     update();
 }
 
+void MainWindow::FlushPendingNotes()
+{
+    bufferNotes_ = false;
+
+    for (const auto &note : pendingNotes_)
+        AddMessage(note.second, note.first);
+
+    pendingNotes_.clear();
+}
+
 void MainWindow::mousePressEvent(QMouseEvent *event)
 {
+    if (IgnoreDuringAnimation())
+        return;
+
     int x = event->position().x();
     int y = event->position().y();
 
@@ -362,7 +449,15 @@ void MainWindow::mousePressEvent(QMouseEvent *event)
         }
     }
 
-    if (!Redacting && !Beaming) return;
+    if (!Redacting && !Beaming)
+    {
+        AddMessage(
+            "Сейчас идёт симуляция: точки ставить нельзя. "
+            "«Переставить источник света» - выбрать другой луч, "
+            "«Редактировать комнату» - править стены.",
+            MsgType::Warning);
+        return;
+    }
     if (!Redacting && Beaming)
     {
         BeamPlaceResult res =
@@ -480,7 +575,17 @@ void MainWindow::mousePressEvent(QMouseEvent *event)
                 - dialog.rect().center()
                 );
 
-            if (dialog.exec() == QDialog::Accepted)
+            const int choice = dialog.exec();
+
+            if (choice == QDialog::Rejected)
+            {
+                // Esc или закрытие окна - ничего не делаем
+                AddMessage("Действие с точкой отменено.");
+                return;
+            }
+
+            // Accepted - "Изменить", любой другой код (2) - "Подключить"
+            if (choice == QDialog::Accepted)
             {
                 // Нажали "Изменить"
 
@@ -599,7 +704,14 @@ void MainWindow::mousePressEvent(QMouseEvent *event)
     // =========================================================
 
     if (polygonCreator.prototype.isCycled_)
+    {
+        AddMessage(
+            "Комната замкнута: новые точки ставить нельзя. "
+            "Нажмите «Откатить точку», чтобы разомкнуть комнату, "
+            "или кликните по вершине, чтобы изменить её.",
+            MsgType::Error);
         return;
+    }
 
     // Если существует только первая точка
     if (temp.empty()
@@ -631,7 +743,7 @@ void MainWindow::paintEvent(QPaintEvent *event)
     QPainter painter(this);
 
     QPen pen;
-    pen.setWidth(5);
+    pen.setWidth(Style::WallWidth);
 
     painter.setPen(pen);
     painter.setBrush(Qt::black);
@@ -642,10 +754,10 @@ void MainWindow::paintEvent(QPaintEvent *event)
         return;
 
     painter.drawEllipse(
-        polygonCreator.prototype.first.getX() - 4,
-        polygonCreator.prototype.first.getY() - 4,
-        8,
-        8
+        QPointF(polygonCreator.prototype.first.getX(),
+                polygonCreator.prototype.first.getY()),
+        Style::PointRadius,
+        Style::PointRadius
         );
 
     if (!temp.empty())
@@ -663,10 +775,10 @@ void MainWindow::paintEvent(QPaintEvent *event)
          i++)
     {
         painter.drawEllipse(
-            temp[i]->getEnd().getX() - 4,
-            temp[i]->getEnd().getY() - 4,
-            8,
-            8
+            QPointF(temp[i]->getEnd().getX(),
+                    temp[i]->getEnd().getY()),
+            Style::PointRadius,
+            Style::PointRadius
             );
 
         temp[i]->Draw(painter, true);
@@ -677,25 +789,48 @@ void MainWindow::paintEvent(QPaintEvent *event)
     if (hist.size() > 1)
     {
         QPen tracePen(QColor(255, 204, 0));   // жёлтый
-        tracePen.setWidth(2);
+        tracePen.setWidth(Style::TraceWidth);
         painter.setPen(tracePen);
 
         for (size_t k = 1; k < hist.size(); ++k)
         {
-            painter.drawLine(
-                QPointF(hist[k - 1].getX(), hist[k - 1].getY()),
-                QPointF(hist[k].getX(), hist[k].getY())
-                );
+            const QPointF from(hist[k - 1].getX(), hist[k - 1].getY());
+            QPointF to(hist[k].getX(), hist[k].getY());
+
+            // Последний отрезок во время анимации растёт от нуля до полной длины
+            if (animating_ && k == hist.size() - 1)
+                to = from + (to - from) * animProgress_;
+
+            painter.drawLine(from, to);
         }
+    }
+
+    // Оранжевая точка подсвечивает последнее достигнутое отражение.
+    // Когда луч долетает до следующего, прежняя точка исчезает
+    // (во время анимации ещё горит та, от которой луч стартовал).
+    if (hist.size() > 1)
+    {
+        QPen reflectPen(QColor(255, 140, 0));
+        reflectPen.setWidth(Style::ReflectPointWidth);
+        reflectPen.setCapStyle(Qt::RoundCap);
+        painter.setPen(reflectPen);
+
+        const size_t reached = animating_ ? hist.size() - 2 : hist.size() - 1;
+
+        // индекс 0 - источник луча, он красный и рисуется отдельно
+        if (reached >= 1)
+            painter.drawPoint(QPointF(hist[reached].getX(), hist[reached].getY()));
     }
 
     if (polygonCreator.prototype.isBeamSet_)
     {
         const Beam &b = polygonCreator.prototype.beam_;
         QPen beamPen(Qt::red);
-        beamPen.setWidth(5);
+        beamPen.setWidth(Style::WallWidth);
         painter.setPen(beamPen);
         painter.setBrush(Qt::red);
-        painter.drawEllipse(b.getX() - 4, b.getY() - 4, 8, 8);
+        painter.drawEllipse(QPointF(b.getX(), b.getY()),
+                            Style::BeamRadius,
+                            Style::BeamRadius);
     }
 }

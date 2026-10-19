@@ -16,6 +16,7 @@
 #include <QtWidgets/QMenuBar>
 #include <QtWidgets/QPushButton>
 #include <QtWidgets/QScrollArea>
+#include <QtWidgets/QSlider>
 #include <QtWidgets/QStatusBar>
 #include <QtWidgets/QWidget>
 
@@ -35,6 +36,7 @@ public:
     QFrame *line_2;
     QFrame *line_3;
     QPushButton *pushButton_5;
+    QSlider *horizontalSlider;
     QMenuBar *menubar;
     QStatusBar *statusbar;
 
@@ -42,7 +44,7 @@ public:
     {
         if (MainWindow->objectName().isEmpty())
             MainWindow->setObjectName("MainWindow");
-        MainWindow->resize(2000, 1200);
+        MainWindow->resize(2000, 1300);
         centralwidget = new QWidget(MainWindow);
         centralwidget->setObjectName("centralwidget");
         line = new QFrame(centralwidget);
@@ -76,7 +78,7 @@ public:
         chatScrollArea->setWidget(scrollAreaWidgetContents);
         line_2 = new QFrame(centralwidget);
         line_2->setObjectName("line_2");
-        line_2->setGeometry(QRect(1600, 0, 21, 1161));
+        line_2->setGeometry(QRect(1600, 0, 21, 1271));
         line_2->setLineWidth(10);
         line_2->setFrameShape(QFrame::VLine);
         line_2->setFrameShadow(QFrame::Sunken);
@@ -89,7 +91,11 @@ public:
         line_3->setFrameShadow(QFrame::Sunken);
         pushButton_5 = new QPushButton(centralwidget);
         pushButton_5->setObjectName("pushButton_5");
-        pushButton_5->setGeometry(QRect(1620, 1050, 371, 101));
+        pushButton_5->setGeometry(QRect(1620, 1100, 371, 101));
+        horizontalSlider = new QSlider(centralwidget);
+        horizontalSlider->setObjectName("horizontalSlider");
+        horizontalSlider->setGeometry(QRect(89, 1190, 521, 20));
+        horizontalSlider->setOrientation(Qt::Horizontal);
         MainWindow->setCentralWidget(centralwidget);
         menubar = new QMenuBar(MainWindow);
         menubar->setObjectName("menubar");

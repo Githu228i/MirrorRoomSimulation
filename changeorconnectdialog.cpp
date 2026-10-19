@@ -71,6 +71,7 @@ ChangeOrConnectDialog::ChangeOrConnectDialog(QWidget *parent)
     connect(button1, &QPushButton::clicked,
             this, &QDialog::accept);
 
+    // "Подключить" возвращает код 2, чтобы отличить его от отмены (Esc = Rejected)
     connect(button2, &QPushButton::clicked,
-            this, &QDialog::reject);
+            this, [this]() { done(2); });
 }

@@ -18,6 +18,18 @@ constexpr double MaxY = 1000.0;
 constexpr double MinPointDist = 10.0;   // ближе - "слишком близко"
 }
 
+// Оформление: размеры при рисовании (в пикселях).
+// WallWidth учитывается и при проверке пересечений: линии стен
+// не должны сливаться, то есть расстояние между ними не меньше толщины.
+namespace Style {
+constexpr int    WallWidth   = 5;     // толщина линий стен
+constexpr double PointRadius = 4.0;   // радиус вершин полигона
+constexpr double BeamRadius  = 4.0;   // радиус точки источника луча
+constexpr int    TraceWidth  = 2;     // толщина линий отражений
+constexpr int    ReflectPointWidth = WallWidth + 1;   // оранжевая точка отражения: на пиксель толще линии комнаты
+constexpr int    ReflectionAnimMs = 1000;   // длительность анимации одного отражения (мс)
+}
+
 // Уровень сообщения для служебного окна
 enum class NoteLevel { Info, Warning, Error };
 
