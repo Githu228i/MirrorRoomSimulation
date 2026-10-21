@@ -566,11 +566,13 @@ bool FrontEndOperators::NextReflection()
         return false;
     }
 
-    // Первое нажатие: идём от стартового луча полигона
-    if (history_.size() <= 1) {
+    // Первое отражение (или первое после сброса): только теперь стираем прежнюю
+    // историю и идём от стартового луча полигона
+    if (traceCleared_ || history_.size() <= 1) {
         tempBeam_ = prototype.beam_;
         history_.assign(1, Points(tempBeam_.getX(), tempBeam_.getY()));
         states_.assign(1, tempBeam_);
+        traceCleared_ = false;
     }
 
     auto result = prototype.TraceBeamIter(tempBeam_);
@@ -586,7 +588,7 @@ bool FrontEndOperators::NextReflection()
 
     const int step = static_cast<int>(history_.size()) - 1;
 
-    Notify(NoteLevel::Info,
+    Notify(NoteLevel::Reflection,
            QString("Отражение %1: %2.").arg(step).arg(PointStr(result.second)));
 
     // Такая точка с таким направлением уже была - ход луча повторяется
@@ -608,12 +610,8 @@ bool FrontEndOperators::NextReflection()
 
 void FrontEndOperators::ResetTrace()
 {
-    history_.clear();
-    states_.clear();
+    // Путь исчезает с экрана сразу (traceCleared_), но history_ и states_ остаются
+    // нетронутыми до первого нового отражения (см. NextReflection)
+    traceCleared_ = true;
     looped_ = false;
-
-    if (prototype.isBeamSet_) {
-        history_.push_back(Points(prototype.beam_.getX(), prototype.beam_.getY()));
-        states_.push_back(prototype.beam_);
-    }
 }
