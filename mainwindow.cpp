@@ -3,6 +3,8 @@
 #include "changeorconnectdialog.h"
 #include "changepointdialog.h"
 #include "beamangledialog.h"
+#include "savehistorydialog.h"
+#include "Darktheme.h"
 
 #include <QPen>
 #include <QMessageBox>
@@ -32,7 +34,8 @@ MainWindow::MainWindow(QWidget *parent)
     , ui(new Ui::MainWindow)
 {
     ui->setupUi(this);
-    setFixedSize(2000,1300);
+    setStyleSheet(Theme::MainStyle());
+    setFixedSize(Style::WindowWidth, Style::WindowHeight);
 
     // ---- Служебное окно справа (чат системы) ----
     ui->chatScrollArea->setWidgetResizable(true);
@@ -173,9 +176,11 @@ MainWindow::MainWindow(QWidget *parent)
     };
 
     AddMessage(
-        "Режим редактирования комнаты. Кликайте, чтобы ставить точки "
-        "(до 9 сторон). Клик по вершине - изменить или соединить её. "
-        "«Начать симуляцию» замкнёт комнату.");
+        QString("Режим редактирования комнаты. Кликайте, чтобы ставить точки "
+                "(комната - от %1 до %2 сторон). Клик по вершине - изменить или соединить её. "
+                "«Начать симуляцию» замкнёт комнату.")
+            .arg(Limits::MinWalls)
+            .arg(Limits::MaxWalls));
 
     connect(ui->pushButton, &QPushButton::clicked,
             this, &MainWindow::FirstButClicked);
@@ -230,7 +235,7 @@ void MainWindow::UpdateButtons()
         if (dim)
         {
             auto *effect = new QGraphicsOpacityEffect(b);
-            effect->setOpacity(0.35);
+            effect->setOpacity(Style::DimOpacity);
             b->setGraphicsEffect(effect);   // старый эффект Qt удаляет сам
         }
         else
@@ -270,7 +275,7 @@ void MainWindow::UpdateButtons()
         if (on)
         {
             auto *effect = new QGraphicsOpacityEffect(w);
-            effect->setOpacity(0.35);
+            effect->setOpacity(Style::DimOpacity);
             w->setGraphicsEffect(effect);   // старый эффект Qt удаляет сам
         }
         else
@@ -283,8 +288,8 @@ void MainWindow::UpdateButtons()
     dimWidget(ui->horizontalSlider_2, SettingsBlocked());
     dimWidget(ui->label_2, SettingsBlocked());
     dimWidget(ui->checkBox, SettingsBlocked());
-    dimWidget(ui->label_3, SettingsBlocked());
-    dimWidget(ui->textEdit, SettingsBlocked());
+    dimWidget(ui->label_3, TraceLimitBlocked());
+    dimWidget(ui->textEdit, TraceLimitBlocked());
 }
 
 // Служебное окно: добавляет сообщение-"пузырь" сверху, старые сдвигаются вниз
@@ -384,11 +389,15 @@ void MainWindow::SecondButClicked() {
     if (Redacting) {
         auto &poly = polygonCreator.prototype;
 
-        if (poly.sides_.size() <= 2) {
+        // Сторон в замкнутой комнате: у незамкнутой добавится замыкающая
+        const int finalWalls = static_cast<int>(poly.sides_.size()) + (poly.isCycled_ ? 0 : 1);
+        if (finalWalls < Limits::MinWalls) {
             AddMessage(
-                "Нельзя начать симуляцию: слишком мало стен "
-                "(нужно больше двух стен до замыкания). Поставьте ещё точки "
-                "или кликните по первой точке и выберите «Подключить».",
+                QString("Нельзя начать симуляцию: слишком мало сторон. В комнате должно быть "
+                        "от %1 до %2 сторон, а сейчас получится %3. Поставьте ещё точки.")
+                    .arg(Limits::MinWalls)
+                    .arg(Limits::MaxWalls)
+                    .arg(finalWalls),
                 MsgType::Error);
             return;
         }
@@ -435,14 +444,14 @@ void MainWindow::SecondButClicked() {
 
             QString kind = "плоская";
             if (dynamic_cast<const ConcaveMirror *>(&m))
-                kind = QString("вогнутая, R = %1").arg(m.getRadius(), 0, 'f', 1);
+                kind = QString("вогнутая, R = %1").arg(m.getRadius(), 0, 'f', Style::MessageDecimals);
             else if (dynamic_cast<const ConvexMirror *>(&m))
-                kind = QString("выпуклая, R = %1").arg(m.getRadius(), 0, 'f', 1);
+                kind = QString("выпуклая, R = %1").arg(m.getRadius(), 0, 'f', Style::MessageDecimals);
 
             desc += QString("\nТочка %1: (%2; %3), стена %1 - %4")
                         .arg(static_cast<int>(i) + 1)
-                        .arg(m.getStart().getX(), 0, 'f', 1)
-                        .arg(m.getStart().getY(), 0, 'f', 1)
+                        .arg(m.getStart().getX(), 0, 'f', Style::MessageDecimals)
+                        .arg(m.getStart().getY(), 0, 'f', Style::MessageDecimals)
                         .arg(kind);
         }
         AddMessage(desc);
@@ -454,10 +463,10 @@ void MainWindow::SecondButClicked() {
         else
         {
             AddMessage(QString("Источник луча сохранён: (%1; %2) на стене %3, угол к стене %4°.")
-                           .arg(poly.beam_.getX(), 0, 'f', 1)
-                           .arg(poly.beam_.getY(), 0, 'f', 1)
+                           .arg(poly.beam_.getX(), 0, 'f', Style::MessageDecimals)
+                           .arg(poly.beam_.getY(), 0, 'f', Style::MessageDecimals)
                            .arg(poly.beamWall_ + 1)
-                           .arg(poly.beamWallAngle_, 0, 'f', 1));
+                           .arg(poly.beamWallAngle_, 0, 'f', BeamAngle::Decimals));
         }
     } else {
         // Новый источник: старый луч удаляем сразу, ещё до выбора нового
@@ -541,6 +550,7 @@ void MainWindow::FourthButClicked()
 
 // Кнопка 5: сохраняет всю историю отражений (history_) в txt-файл, выбранный пользователем.
 // История хранится и после сброса пути, поэтому можно сохранить и прошлую симуляцию.
+// В файл попадают комната и параметры луча на момент старта той симуляции (snapshot_).
 void MainWindow::FifthButClicked()
 {
     if (animating_ || repeating_)
@@ -560,7 +570,11 @@ void MainWindow::FifthButClicked()
         return;
     }
 
-    const std::vector<Points> hist = polygonCreator.history_;   // копия на время диалога
+    // копии на время диалогов
+    const std::vector<Points> hist = polygonCreator.history_;
+    const std::vector<Beam> states = polygonCreator.states_;
+    const TraceSnapshot snap = polygonCreator.snapshot_;
+
     if (hist.size() <= 1)
     {
         AddMessage("Сохранять нечего: история отражений пуста.", MsgType::Warning);
@@ -569,6 +583,23 @@ void MainWindow::FifthButClicked()
 
     const bool current = polygonCreator.HasTrace();
 
+    // 1) Сколько знаков после запятой сохранять в координатах
+    SaveHistoryDialog precisionDialog(
+        saveDecimals_, Style::SaveDecimalsMax,
+        hist[1].getX(), hist[1].getY(), this);
+    precisionDialog.move(
+        this->geometry().center()
+        - precisionDialog.rect().center()
+        );
+
+    if (precisionDialog.exec() != QDialog::Accepted)
+    {
+        AddMessage("Сохранение истории отменено.");
+        return;
+    }
+    saveDecimals_ = precisionDialog.getDecimals();
+
+    // 2) Куда сохранять
     if (lastSaveDir_.isEmpty())
         lastSaveDir_ = QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation);
 
@@ -612,11 +643,20 @@ void MainWindow::FifthButClicked()
         return;
     }
 
-    auto fmt = [](const Points &p)
+    // Форматирование чисел
+    const int dec = saveDecimals_;
+    auto num = [dec](double v) { return QString::number(v, 'f', dec); };
+    auto pt = [&num](double x, double y)
     {
-        return QString("(%1; %2)")
-            .arg(p.getX(), 0, 'f', Style::SaveDecimals)
-            .arg(p.getY(), 0, 'f', Style::SaveDecimals);
+        return QString("(%1; %2)").arg(num(x), num(y));
+    };
+    // Угол луча (радианы) -> градусы в пределах [0; 360)
+    auto ang = [](double rad)
+    {
+        double d = std::fmod(rad * Math::HalfTurnDeg / Math::Pi, Math::FullTurnDeg);
+        if (d < 0.0)
+            d += Math::FullTurnDeg;
+        return QString::number(d, 'f', Style::SaveAngleDecimals);
     };
 
     QTextStream out(&file);
@@ -626,11 +666,46 @@ void MainWindow::FifthButClicked()
     out << "Сохранено: "
         << QDateTime::currentDateTime().toString("yyyy-MM-dd HH:mm:ss") << "\n";
     out << (current ? "Симуляция: текущая\n" : "Симуляция: прошлая (путь был сброшен)\n");
-    out << "Количество отражений: " << (hist.size() - 1) << "\n\n";
+    out << "Знаков после запятой в координатах: " << dec << "\n";
+    out << "Углы направления луча: в градусах, из внутреннего представления луча, "
+           "в пределах от 0 до 360\n\n";
 
-    out << "Старт: " << fmt(hist[0]) << "\n";
+    // Комната
+    out << "КОМНАТА\n";
+    out << "Сторон: " << snap.walls.size() << "\n";
+    for (size_t i = 0; i < snap.walls.size(); ++i)
+    {
+        const auto &w = snap.walls[i];
+
+        QString kind = "плоская";
+        if (w.type == MirrorKind::Concave)
+            kind = "вогнутая, R = " + num(w.radius);
+        else if (w.type == MirrorKind::Convex)
+            kind = "выпуклая, R = " + num(w.radius);
+
+        out << "Точка " << (i + 1) << ": " << pt(w.x, w.y)
+            << ", стена " << (i + 1) << " - " << kind << "\n";
+    }
+
+    // Начальные параметры луча
+    out << "\nНАЧАЛЬНЫЙ ЛУЧ\n";
+    out << "Источник: " << pt(hist[0].getX(), hist[0].getY())
+        << " на стене " << (snap.beamWall + 1) << "\n";
+    out << "Угол к стене: "
+        << QString::number(snap.beamWallAngle, 'f', Style::SaveAngleDecimals) << "°\n";
+    if (!states.empty())
+        out << "Направление луча: " << ang(states[0].getA()) << "°\n";
+
+    // Отражения: после каждой точки - направление луча, уходящего от неё
+    out << "\nОТРАЖЕНИЯ\n";
+    out << "Количество отражений: " << (hist.size() - 1) << "\n";
     for (size_t k = 1; k < hist.size(); ++k)
-        out << "Отражение " << k << ": " << fmt(hist[k]) << "\n";
+    {
+        out << "Отражение " << k << ": " << pt(hist[k].getX(), hist[k].getY());
+        if (k < states.size())
+            out << ", угол луча после отражения: " << ang(states[k].getA()) << "°";
+        out << "\n";
+    }
 
     out.flush();
 
@@ -668,9 +743,9 @@ bool MainWindow::StartReflectionStep()
     const auto &hist = polygonCreator.history_;
     const double length = hist[hist.size() - 2].Dist(hist.back());
 
-    int ms = static_cast<int>(std::lround(length / raySpeed_ * 1000.0));
-    if (ms < 1)
-        ms = 1;
+    int ms = static_cast<int>(std::lround(length / raySpeed_ * Style::MsPerSecond));
+    if (ms < Style::MinAnimMs)
+        ms = Style::MinAnimMs;
 
     animating_ = true;
     animProgress_ = 0.0;
@@ -695,7 +770,7 @@ void MainWindow::SetRepeatDelay(int ms)
     repeatDelayMs_ = ms;
     ui->label_2->setText(
         QString("Задержка луча между отражениями (в режиме авто): %1 сек")
-            .arg(ms / 1000.0, 0, 'f', 1));
+            .arg(ms / Style::MsPerSecond, 0, 'f', Style::DelayDecimals));
 }
 
 // Пауза закончилась: следующее отражение (если повтор не остановили)
@@ -736,6 +811,13 @@ bool MainWindow::SettingsBlocked() const
     return animating_ || repeating_ || (!Redacting && Beaming);
 }
 
+// Поле «Макс. кол-во отражений» работает только при включённой галочке
+// «Удалять старые отражения» (и когда остальные настройки не заблокированы)
+bool MainWindow::TraceLimitBlocked() const
+{
+    return SettingsBlocked() || !eraseOld_;
+}
+
 // Применяет число из поля «Макс. кол-во отражений» (Enter или потеря фокуса).
 // То же самое число - ничего не сбрасывается; новое - путь луча сбрасывается.
 void MainWindow::CommitTraceLimit()
@@ -743,7 +825,7 @@ void MainWindow::CommitTraceLimit()
     const QString current = QString::number(traceLimit_);
 
     // Поле скрыто или заблокировано: введённое не применяем, возвращаем прежнее
-    if (!ui->textEdit->isVisible() || SettingsBlocked())
+    if (!ui->textEdit->isVisible() || TraceLimitBlocked())
     {
         if (ui->textEdit->toPlainText() != current)
             ui->textEdit->setPlainText(current);
@@ -777,18 +859,17 @@ void MainWindow::CommitTraceLimit()
     UpdateButtons();
     update();
 
-    QString msg = QString("Максимальное количество отражений: %1. Путь луча сброшен.")
-                      .arg(traceLimit_);
-    if (!eraseOld_)
-        msg += " Удаление старых отражений сейчас выключено: предел начнёт "
-               "действовать после включения галочки.";
-    AddMessage(msg);
+    AddMessage(QString("Максимальное количество отражений: %1. Путь луча сброшен.")
+                   .arg(traceLimit_));
 }
 
-// Enter и потеря фокуса применяют число в поле ввода. Пока настройки заблокированы,
-// глотаем нажатия, колесо и клавиши и пишем в чат.
+// Enter и потеря фокуса применяют число в поле ввода. Пока настройки заблокированы
+// (а для поля числа - ещё и пока выключена галочка), глотаем нажатия, колесо и клавиши
+// и пишем в чат.
 bool MainWindow::eventFilter(QObject *obj, QEvent *event)
 {
+    const bool isLimitField = (obj == ui->textEdit || obj == ui->textEdit->viewport());
+
     if (obj == ui->textEdit)
     {
         if (event->type() == QEvent::FocusOut)
@@ -797,7 +878,7 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *event)
             return false;   // фокус уходит как обычно
         }
 
-        if (!SettingsBlocked() && event->type() == QEvent::KeyPress)
+        if (!TraceLimitBlocked() && event->type() == QEvent::KeyPress)
         {
             const int key = static_cast<QKeyEvent *>(event)->key();
             if (key == Qt::Key_Return || key == Qt::Key_Enter)
@@ -815,10 +896,12 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *event)
         what = "задержку луча";
     else if (obj == ui->checkBox)
         what = "режим удаления старых отражений";
-    else if (obj == ui->textEdit || obj == ui->textEdit->viewport())
+    else if (isLimitField)
         what = "максимальное количество отражений";
 
-    if (!what.isEmpty() && SettingsBlocked())
+    const bool blocked = isLimitField ? TraceLimitBlocked() : SettingsBlocked();
+
+    if (!what.isEmpty() && blocked)
     {
         switch (event->type())
         {
@@ -831,10 +914,15 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *event)
                     QString("Нельзя менять %1, пока идёт анимация или повтор. "
                             "Дождитесь конца анимации или остановите повтор.").arg(what),
                     MsgType::Warning);
-            else
+            else if (!Redacting && Beaming)
                 AddMessage(
                     QString("Нельзя менять %1, пока не выбран источник на стене. "
                             "Кликните по стене, откуда должен выйти луч.").arg(what),
+                    MsgType::Warning);
+            else
+                AddMessage(
+                    QString("Нельзя менять %1, пока не включена галочка "
+                            "«Удалять старые отражения».").arg(what),
                     MsgType::Warning);
             return true;
         default:
@@ -922,7 +1010,11 @@ void MainWindow::mousePressEvent(QMouseEvent *event)
     if (x > Limits::MaxX || y > Limits::MaxY)
     {
         AddMessage(
-            "Клик вне рабочей области (допустимо: x от 0 до 1580, y от 0 до 1000).",
+            QString("Клик вне рабочей области (допустимо: x от %1 до %2, y от %3 до %4).")
+                .arg(Limits::MinX, 0, 'f', 0)
+                .arg(Limits::MaxX, 0, 'f', 0)
+                .arg(Limits::MinY, 0, 'f', 0)
+                .arg(Limits::MaxY, 0, 'f', 0),
             MsgType::Warning);
         return;
     }
@@ -933,12 +1025,14 @@ void MainWindow::mousePressEvent(QMouseEvent *event)
         double bx = x - b.getX();
         double by = y - b.getY();
 
-        if (bx * bx + by * by <= 25)
+        if (bx * bx + by * by <= Limits::ClickRadius * Limits::ClickRadius)
         {
             BeamAngleDialog angleDialog(
                 this,
                 polygonCreator.prototype.beamWallAngle_
                 );
+            connect(&angleDialog, &BeamAngleDialog::invalidAngle, this,
+                    [this](const QString &msg) { AddMessage(msg, MsgType::Error); });
             angleDialog.move(
                 this->geometry().center()
                 - angleDialog.rect().center()
@@ -952,7 +1046,7 @@ void MainWindow::mousePressEvent(QMouseEvent *event)
                 update();
 
                 AddMessage(QString("Угол луча изменён: %1° к стене %2.")
-                               .arg(angleDialog.getAngle(), 0, 'f', 1)
+                               .arg(angleDialog.getAngle(), 0, 'f', BeamAngle::Decimals)
                                .arg(polygonCreator.prototype.beamWall_ + 1));
             }
             return;
@@ -971,13 +1065,14 @@ void MainWindow::mousePressEvent(QMouseEvent *event)
     if (!Redacting && Beaming)
     {
         BeamPlaceResult res =
-            polygonCreator.prototype.PlaceBeam(Points(x, y), 6.0, 10.0);
+            polygonCreator.prototype.PlaceBeam(Points(x, y), Limits::BeamWallTolerance, Limits::MinBeamVertexDist);
 
         if (res == BeamPlaceResult::NoWall)
         {
             AddMessage(
-                "Невозможно поставить луч: рядом нет стены. "
-                "Кликните точно по линии зеркала (не дальше 6 пикселей).",
+                QString("Невозможно поставить луч: рядом нет стены. "
+                        "Кликните точно по линии зеркала (не дальше %1 пикселей).")
+                    .arg(static_cast<int>(Limits::BeamWallTolerance)),
                 MsgType::Error);
             return;
         }
@@ -985,8 +1080,9 @@ void MainWindow::mousePressEvent(QMouseEvent *event)
         if (res == BeamPlaceResult::TooClose)
         {
             AddMessage(
-                "Луч нельзя ставить так близко к вершине "
-                "(ближе 10 пикселей). Выберите точку подальше.",
+                QString("Луч нельзя ставить так близко к вершине "
+                        "(ближе %1 пикселей). Выберите точку подальше.")
+                    .arg(static_cast<int>(Limits::MinBeamVertexDist)),
                 MsgType::Error);
             return;
         }
@@ -994,6 +1090,8 @@ void MainWindow::mousePressEvent(QMouseEvent *event)
         repaint();   // показать точку, пока открыто окно выбора угла
 
         BeamAngleDialog angleDialog(this);
+        connect(&angleDialog, &BeamAngleDialog::invalidAngle, this,
+                [this](const QString &msg) { AddMessage(msg, MsgType::Error); });
         angleDialog.move(
             this->geometry().center()
             - angleDialog.rect().center()
@@ -1009,10 +1107,10 @@ void MainWindow::mousePressEvent(QMouseEvent *event)
             UpdateButtons();
 
             AddMessage(QString("Источник луча: (%1; %2) на стене %3, угол к стене %4°.")
-                           .arg(poly.beam_.getX(), 0, 'f', 1)
-                           .arg(poly.beam_.getY(), 0, 'f', 1)
+                           .arg(poly.beam_.getX(), 0, 'f', Style::MessageDecimals)
+                           .arg(poly.beam_.getY(), 0, 'f', Style::MessageDecimals)
                            .arg(poly.beamWall_ + 1)
-                           .arg(angleDialog.getAngle(), 0, 'f', 1));
+                           .arg(angleDialog.getAngle(), 0, 'f', BeamAngle::Decimals));
         }
         else
         {
@@ -1038,15 +1136,38 @@ void MainWindow::mousePressEvent(QMouseEvent *event)
             y - temp[i]->getStart().getY();
 
         // Попали точно в точку
-        if (dx * dx + dy * dy <= 25)
+        if (dx * dx + dy * dy <= Limits::ClickRadius * Limits::ClickRadius)
         {
             // -------------------------------------------------
             // ПОЛИГОН УЖЕ ЗАМКНУТ
-            // Сразу изменение
+            // Диалог выбора, но «Подключить» недоступно
             // -------------------------------------------------
 
             if (polygonCreator.prototype.isCycled_)
             {
+                ChangeOrConnectDialog dialog(this, true, false);
+
+                dialog.move(
+                    this->geometry().center()
+                    - dialog.rect().center()
+                    );
+
+                const int choice = dialog.exec();
+
+                if (choice == QDialog::Rejected)
+                {
+                    AddMessage("Действие с точкой отменено.");
+                    return;
+                }
+
+                if (choice == ChangeOrConnectDialog::DeleteCode)
+                {
+                    polygonCreator.DeletePoint(i);   // удалит вершину, если останется не меньше Limits::MinWalls
+                    update();
+                    return;
+                }
+
+                // Нажали "Изменить"
                 ChangePointDialog changeDialog(
                     i + 1,
                     temp[i]->getStart(),
@@ -1094,7 +1215,15 @@ void MainWindow::mousePressEvent(QMouseEvent *event)
                 return;
             }
 
-            // Accepted - "Изменить", любой другой код (2) - "Подключить"
+            // Нажали "Удалить"
+            if (choice == ChangeOrConnectDialog::DeleteCode)
+            {
+                polygonCreator.DeletePoint(i);
+                update();
+                return;
+            }
+
+            // Accepted - "Изменить", иначе (ConnectCode) - "Подключить"
             if (choice == QDialog::Accepted)
             {
                 // Нажали "Изменить"
@@ -1146,9 +1275,11 @@ void MainWindow::mousePressEvent(QMouseEvent *event)
         }
 
         // Слишком близко к существующей точке
-        if (dx * dx + dy * dy <= 100)
+        if (dx * dx + dy * dy <= Limits::MinPointDist * Limits::MinPointDist)
         {
-            AddMessage("Нельзя поставить точку: она слишком близко к другой точке (ближе 10 пикселей).", MsgType::Error);
+            AddMessage(QString("Нельзя поставить точку: она слишком близко к другой точке (ближе %1 пикселей).")
+                           .arg(static_cast<int>(Limits::MinPointDist)),
+                       MsgType::Error);
 
             return;
         }
@@ -1168,10 +1299,35 @@ void MainWindow::mousePressEvent(QMouseEvent *event)
             y - temp.back()->getEnd().getY();
 
         // Попали в последнюю точку
-        if (dx * dx + dy * dy <= 25)
+        if (dx * dx + dy * dy <= Limits::ClickRadius * Limits::ClickRadius)
         {
-            // Последнюю точку нельзя подключить,
-            // поэтому сразу открываем изменение
+            // Последнюю точку нельзя подключить: в диалоге доступны
+            // только "Изменить" и "Удалить"
+            const int lastIdx = static_cast<int>(temp.size());
+
+            ChangeOrConnectDialog dialog(this, true, false);
+
+            dialog.move(
+                this->geometry().center()
+                - dialog.rect().center()
+                );
+
+            const int choice = dialog.exec();
+
+            if (choice == QDialog::Rejected)
+            {
+                AddMessage("Действие с точкой отменено.");
+                return;
+            }
+
+            if (choice == ChangeOrConnectDialog::DeleteCode)
+            {
+                polygonCreator.DeletePoint(lastIdx);
+                update();
+                return;
+            }
+
+            // Нажали "Изменить"
 
             ChangePointDialog changeDialog(
                 temp.size() + 1,
@@ -1200,9 +1356,11 @@ void MainWindow::mousePressEvent(QMouseEvent *event)
         }
 
         // Слишком близко к последней точке
-        if (dx * dx + dy * dy <= 100)
+        if (dx * dx + dy * dy <= Limits::MinPointDist * Limits::MinPointDist)
         {
-            AddMessage("Нельзя поставить точку: она слишком близко к другой точке (ближе 10 пикселей).", MsgType::Error);
+            AddMessage(QString("Нельзя поставить точку: она слишком близко к другой точке (ближе %1 пикселей).")
+                           .arg(static_cast<int>(Limits::MinPointDist)),
+                       MsgType::Error);
 
             return;
         }
@@ -1233,9 +1391,34 @@ void MainWindow::mousePressEvent(QMouseEvent *event)
         double dy =
             y - polygonCreator.prototype.first.getY();
 
-        if (dx * dx + dy * dy <= 100)
+        // Клик по единственной точке: доступно только удаление
+        if (dx * dx + dy * dy <= Limits::ClickRadius * Limits::ClickRadius)
         {
-            AddMessage("Нельзя поставить точку: она слишком близко к другой точке (ближе 10 пикселей).", MsgType::Error);
+            ChangeOrConnectDialog dialog(this, false, false);
+
+            dialog.move(
+                this->geometry().center()
+                - dialog.rect().center()
+                );
+
+            if (dialog.exec() == ChangeOrConnectDialog::DeleteCode)
+            {
+                polygonCreator.DeletePoint(0);
+                update();
+            }
+            else
+            {
+                AddMessage("Действие с точкой отменено.");
+            }
+
+            return;
+        }
+
+        if (dx * dx + dy * dy <= Limits::MinPointDist * Limits::MinPointDist)
+        {
+            AddMessage(QString("Нельзя поставить точку: она слишком близко к другой точке (ближе %1 пикселей).")
+                           .arg(static_cast<int>(Limits::MinPointDist)),
+                       MsgType::Error);
 
             return;
         }
@@ -1251,12 +1434,22 @@ void MainWindow::paintEvent(QPaintEvent *event)
     Q_UNUSED(event);
 
     QPainter painter(this);
+    painter.setRenderHint(QPainter::Antialiasing, true);
 
-    QPen pen;
+    // Тёмный фон окна и рабочей зоны (центральный виджет прозрачный, см. Darktheme.h)
+    painter.fillRect(rect(), Theme::Window);
+    const QRectF zone(Limits::MinX, Limits::MinY,
+                      Limits::MaxX - Limits::MinX, Limits::MaxY - Limits::MinY);
+    painter.fillRect(zone, Theme::Canvas);
+    painter.setPen(QPen(Theme::CanvasBorder, 1));
+    painter.setBrush(Qt::NoBrush);
+    painter.drawRect(zone);
+
+    QPen pen(Theme::Wall);
     pen.setWidth(Style::WallWidth);
 
     painter.setPen(pen);
-    painter.setBrush(Qt::black);
+    painter.setBrush(Theme::Wall);
 
     const auto &temp = polygonCreator.prototype.sides_;
 
@@ -1298,7 +1491,7 @@ void MainWindow::paintEvent(QPaintEvent *event)
     const auto &hist = polygonCreator.history_;
     if (polygonCreator.HasTrace())
     {
-        QPen tracePen(QColor(255, 204, 0));   // жёлтый
+        QPen tracePen(Theme::Trace);   // жёлтый
         tracePen.setWidth(Style::TraceWidth);
         painter.setPen(tracePen);
 
@@ -1340,7 +1533,7 @@ void MainWindow::paintEvent(QPaintEvent *event)
     // (во время анимации ещё горит та, от которой луч стартовал).
     if (polygonCreator.HasTrace())
     {
-        QPen reflectPen(QColor(255, 140, 0));
+        QPen reflectPen(Theme::Reflect);
         reflectPen.setWidth(Style::ReflectPointWidth);
         reflectPen.setCapStyle(Qt::RoundCap);
         painter.setPen(reflectPen);
@@ -1355,10 +1548,10 @@ void MainWindow::paintEvent(QPaintEvent *event)
     if (polygonCreator.prototype.isBeamSet_)
     {
         const Beam &b = polygonCreator.prototype.beam_;
-        QPen beamPen(Qt::red);
+        QPen beamPen(Theme::Source);
         beamPen.setWidth(Style::WallWidth);
         painter.setPen(beamPen);
-        painter.setBrush(Qt::red);
+        painter.setBrush(Theme::Source);
         painter.drawEllipse(QPointF(b.getX(), b.getY()),
                             Style::BeamRadius,
                             Style::BeamRadius);

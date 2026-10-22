@@ -1,5 +1,6 @@
 #include "changepointdialog.h"
 #include "mirror.h"
+#include "frontendoperators.h"   // MirrorKind
 
 #include <QLabel>
 #include <QDoubleSpinBox>
@@ -148,6 +149,23 @@ ChangePointDialog::ChangePointDialog(
     mainLayout->addLayout(radiusLayout);
     mainLayout->addStretch();
     mainLayout->addLayout(buttonsLayout);
+
+    // Подгружаем текущий тип зеркала и радиус (для последней точки зеркала нет)
+    if (mirror_ && !lastPoint)
+    {
+        int kind = MirrorKind::Plane;
+        if (dynamic_cast<const ConcaveMirror *>(mirror_))
+            kind = MirrorKind::Concave;
+        else if (dynamic_cast<const ConvexMirror *>(mirror_))
+            kind = MirrorKind::Convex;
+
+        mirrorType->setCurrentIndex(kind);   // порядок списка совпадает с MirrorKind
+
+        if (kind != MirrorKind::Plane)
+            radiusSpinBox->setValue(mirror_->getRadius());   // модуль радиуса
+
+        radiusSpinBox->setEnabled(kind != MirrorKind::Plane);
+    }
 
     // Для последней точки незамкнутого полигона
     // зеркало из неё ещё не существует.

@@ -105,7 +105,7 @@ public:
         horizontalSlider->setOrientation(Qt::Horizontal);
         label = new QLabel(centralwidget);
         label->setObjectName("label");
-        label->setGeometry(QRect(230, 1160, 331, 51));
+        label->setGeometry(QRect(220, 1160, 351, 51));
         label->setFont(font1);
         label->setFocusPolicy(Qt::NoFocus);
         label->setLayoutDirection(Qt::LeftToRight);

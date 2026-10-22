@@ -196,6 +196,12 @@
 	"HEADERS" : 
 	[
 		[
+			"/home/vladimir/MirrorRoomSimulation/Darktheme.h",
+			"MU",
+			"EWIEGA46WW/moc_Darktheme.cpp",
+			null
+		],
+		[
 			"/home/vladimir/MirrorRoomSimulation/backendoperators.h",
 			"MU",
 			"EWIEGA46WW/moc_backendoperators.cpp",
@@ -247,6 +253,12 @@
 			"/home/vladimir/MirrorRoomSimulation/polygon.h",
 			"MU",
 			"EWIEGA46WW/moc_polygon.cpp",
+			null
+		],
+		[
+			"/home/vladimir/MirrorRoomSimulation/savehistorydialog.h",
+			"MU",
+			"EWIEGA46WW/moc_savehistorydialog.cpp",
 			null
 		]
 	],
@@ -336,7 +348,12 @@
 		[ "/home/vladimir/MirrorRoomSimulation/mainwindow.cpp", "MU", null ],
 		[ "/home/vladimir/MirrorRoomSimulation/mirror.cpp", "MU", null ],
 		[ "/home/vladimir/MirrorRoomSimulation/points.cpp", "MU", null ],
-		[ "/home/vladimir/MirrorRoomSimulation/polygon.cpp", "MU", null ]
+		[ "/home/vladimir/MirrorRoomSimulation/polygon.cpp", "MU", null ],
+		[
+			"/home/vladimir/MirrorRoomSimulation/savehistorydialog.cpp",
+			"MU",
+			null
+		]
 	],
 	"UIC_OPTIONS" : [],
 	"UIC_SEARCH_PATHS" : [],

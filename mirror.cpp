@@ -2,6 +2,7 @@
 
 #include <QPainter>
 #include <QPainterPath>
+#include <QPolygonF>
 
 #include <algorithm>
 #include <cmath>
@@ -13,142 +14,142 @@
 // Вспомогательные функции пересечений
 // ============================================================
 namespace {
-    constexpr double EPS       = 1e-9;
-    constexpr double POINT_EPS = 1e-6;
-    constexpr double PAR_EPS   = 1e-10;
-    constexpr double FLAT_R    = 1e7;
+constexpr double EPS       = 1e-9;
+constexpr double POINT_EPS = 1e-6;
+constexpr double PAR_EPS   = 1e-10;
+constexpr double FLAT_R    = 1e7;
 
-    double ArcTol(double r) { return 1e-6 + 1e-12 * r; }
+double ArcTol(double r) { return 1e-6 + 1e-12 * r; }
 
-    bool PointsEqual(const Points& a, const Points& b) {
-        return a.Dist(b) < POINT_EPS;
-    }
-    bool IsEndpoint(const Points& p, const Mirror& m) {
-        return PointsEqual(p, m.getStart()) || PointsEqual(p, m.getEnd());
-    }
-    void AddUniquePoint(std::vector<Points>& pts, const Points& p) {
-        for (const auto& e : pts) if (PointsEqual(e, p)) return;
-        pts.push_back(p);
-    }
+bool PointsEqual(const Points& a, const Points& b) {
+    return a.Dist(b) < POINT_EPS;
+}
+bool IsEndpoint(const Points& p, const Mirror& m) {
+    return PointsEqual(p, m.getStart()) || PointsEqual(p, m.getEnd());
+}
+void AddUniquePoint(std::vector<Points>& pts, const Points& p) {
+    for (const auto& e : pts) if (PointsEqual(e, p)) return;
+    pts.push_back(p);
+}
 
-    // ---------- отрезок / отрезок ----------
-    void IntersectSegments(const Points& a1, const Points& a2,
-                           const Points& b1, const Points& b2,
-                           std::vector<Points>& result) {
-        double d1x = a2.getX() - a1.getX(), d1y = a2.getY() - a1.getY();
-        double d2x = b2.getX() - b1.getX(), d2y = b2.getY() - b1.getY();
-        double L1 = std::sqrt(d1x * d1x + d1y * d1y);
-        double L2 = std::sqrt(d2x * d2x + d2y * d2y);
-        if (L1 < POINT_EPS || L2 < POINT_EPS) return;
-
-        double wx = b1.getX() - a1.getX(), wy = b1.getY() - a1.getY();
-        double cross = d1x * d2y - d1y * d2x;
-
-        if (std::abs(cross) / (L1 * L2) < PAR_EPS) {
-            double distToLine = std::abs(wx * d1y - wy * d1x) / L1;
-            if (distToLine > POINT_EPS) return;
-
-            double L1sq = L1 * L1;
-            double tb1 = (wx * d1x + wy * d1y) / L1sq;
-            double tb2 = ((b2.getX() - a1.getX()) * d1x +
-                          (b2.getY() - a1.getY()) * d1y) / L1sq;
-            double tol = POINT_EPS / L1;
-
-            double lo = std::max(0.0, std::min(tb1, tb2));
-            double hi = std::min(1.0, std::max(tb1, tb2));
-            if (lo > hi + tol) return;
-            if (lo > hi) lo = hi = std::min(1.0, std::max(0.0, (lo + hi) / 2));
-
-            AddUniquePoint(result, Points(a1.getX() + lo * d1x, a1.getY() + lo * d1y));
-            if (hi - lo > tol)
-                AddUniquePoint(result, Points(a1.getX() + hi * d1x, a1.getY() + hi * d1y));
-            return;
-        }
-
-        double t = (wx * d2y - wy * d2x) / cross;
-        double u = (wx * d1y - wy * d1x) / cross;
-        double tolT = POINT_EPS / L1, tolU = POINT_EPS / L2;
-
-        if (t >= -tolT && t <= 1.0 + tolT && u >= -tolU && u <= 1.0 + tolU) {
-            t = std::min(1.0, std::max(0.0, t));
-            AddUniquePoint(result, Points(a1.getX() + t * d1x, a1.getY() + t * d1y));
-        }
-    }
-
-    // ---------- отрезок / дуга ----------
-    void IntersectSegmentArc(const Points& a1, const Points& a2,
-                             const Mirror& arc,
-                             std::vector<Points>& result) {
-        if (arc.isFlat()) {
-            IntersectSegments(a1, a2, arc.getStart(), arc.getEnd(), result);
-            return;
-        }
-
-        double dx = a2.getX() - a1.getX(), dy = a2.getY() - a1.getY();
-        double L = std::sqrt(dx * dx + dy * dy);
-        if (L < POINT_EPS) return;
-        double ux = dx / L, uy = dy / L;
-
-        Points c = arc.CircleCenter();
-        double r = std::abs(arc.getRad());
-
-        double wx = c.getX() - a1.getX(), wy = c.getY() - a1.getY();
-        double proj = wx * ux + wy * uy;
-        double perp = std::abs(wx * uy - wy * ux);
-
-        double tol = EPS * std::max(1.0, r);
-        if (perp > r + tol) return;
-        double h = (perp > r - tol) ? 0.0 : std::sqrt((r - perp) * (r + perp));
-
-        auto check = [&](double s) {
-            if (s < -POINT_EPS || s > L + POINT_EPS) return;
-            Points p(a1.getX() + s * ux, a1.getY() + s * uy);
-            if (arc.PointOnArc(p, c)) AddUniquePoint(result, p);
-        };
-
-        check(proj - h);
-        if (h > 0) check(proj + h);
-    }
-
-    // ---------- дуга / дуга ----------
-    void IntersectArcs(const Mirror& m1, const Mirror& m2,
+// ---------- отрезок / отрезок ----------
+void IntersectSegments(const Points& a1, const Points& a2,
+                       const Points& b1, const Points& b2,
                        std::vector<Points>& result) {
-        Points c1 = m1.CircleCenter();
-        Points c2 = m2.CircleCenter();
-        double r1 = std::abs(m1.getRad());
-        double r2 = std::abs(m2.getRad());
+    double d1x = a2.getX() - a1.getX(), d1y = a2.getY() - a1.getY();
+    double d2x = b2.getX() - b1.getX(), d2y = b2.getY() - b1.getY();
+    double L1 = std::sqrt(d1x * d1x + d1y * d1y);
+    double L2 = std::sqrt(d2x * d2x + d2y * d2y);
+    if (L1 < POINT_EPS || L2 < POINT_EPS) return;
 
-        double dx = c2.getX() - c1.getX();
-        double dy = c2.getY() - c1.getY();
-        double d = std::sqrt(dx * dx + dy * dy);
-        double tol = EPS * std::max(1.0, std::max(r1, r2));
+    double wx = b1.getX() - a1.getX(), wy = b1.getY() - a1.getY();
+    double cross = d1x * d2y - d1y * d2x;
 
-        if (d < POINT_EPS) {
-            if (std::abs(r1 - r2) < POINT_EPS) {
-                if (m1.PointOnArc(m2.getStart(), c1)) AddUniquePoint(result, m2.getStart());
-                if (m1.PointOnArc(m2.getEnd(),   c1)) AddUniquePoint(result, m2.getEnd());
-                if (m2.PointOnArc(m1.getStart(), c2)) AddUniquePoint(result, m1.getStart());
-                if (m2.PointOnArc(m1.getEnd(),   c2)) AddUniquePoint(result, m1.getEnd());
-            }
-            return;
-        }
+    if (std::abs(cross) / (L1 * L2) < PAR_EPS) {
+        double distToLine = std::abs(wx * d1y - wy * d1x) / L1;
+        if (distToLine > POINT_EPS) return;
 
-        if (d > r1 + r2 + tol) return;
-        if (d < std::abs(r1 - r2) - tol) return;
+        double L1sq = L1 * L1;
+        double tb1 = (wx * d1x + wy * d1y) / L1sq;
+        double tb2 = ((b2.getX() - a1.getX()) * d1x +
+                      (b2.getY() - a1.getY()) * d1y) / L1sq;
+        double tol = POINT_EPS / L1;
 
-        double a = (r1 * r1 - r2 * r2 + d * d) / (2.0 * d);
-        double hSq = r1 * r1 - a * a;
-        double h = hSq > 0 ? std::sqrt(hSq) : 0.0;
+        double lo = std::max(0.0, std::min(tb1, tb2));
+        double hi = std::min(1.0, std::max(tb1, tb2));
+        if (lo > hi + tol) return;
+        if (lo > hi) lo = hi = std::min(1.0, std::max(0.0, (lo + hi) / 2));
 
-        double px = c1.getX() + a * dx / d;
-        double py = c1.getY() + a * dy / d;
-
-        Points p1(px + h * dy / d, py - h * dx / d);
-        Points p2(px - h * dy / d, py + h * dx / d);
-
-        if (m1.PointOnArc(p1, c1) && m2.PointOnArc(p1, c2)) AddUniquePoint(result, p1);
-        if (m1.PointOnArc(p2, c1) && m2.PointOnArc(p2, c2)) AddUniquePoint(result, p2);
+        AddUniquePoint(result, Points(a1.getX() + lo * d1x, a1.getY() + lo * d1y));
+        if (hi - lo > tol)
+            AddUniquePoint(result, Points(a1.getX() + hi * d1x, a1.getY() + hi * d1y));
+        return;
     }
+
+    double t = (wx * d2y - wy * d2x) / cross;
+    double u = (wx * d1y - wy * d1x) / cross;
+    double tolT = POINT_EPS / L1, tolU = POINT_EPS / L2;
+
+    if (t >= -tolT && t <= 1.0 + tolT && u >= -tolU && u <= 1.0 + tolU) {
+        t = std::min(1.0, std::max(0.0, t));
+        AddUniquePoint(result, Points(a1.getX() + t * d1x, a1.getY() + t * d1y));
+    }
+}
+
+// ---------- отрезок / дуга ----------
+void IntersectSegmentArc(const Points& a1, const Points& a2,
+                         const Mirror& arc,
+                         std::vector<Points>& result) {
+    if (arc.isFlat()) {
+        IntersectSegments(a1, a2, arc.getStart(), arc.getEnd(), result);
+        return;
+    }
+
+    double dx = a2.getX() - a1.getX(), dy = a2.getY() - a1.getY();
+    double L = std::sqrt(dx * dx + dy * dy);
+    if (L < POINT_EPS) return;
+    double ux = dx / L, uy = dy / L;
+
+    Points c = arc.CircleCenter();
+    double r = std::abs(arc.getRad());
+
+    double wx = c.getX() - a1.getX(), wy = c.getY() - a1.getY();
+    double proj = wx * ux + wy * uy;
+    double perp = std::abs(wx * uy - wy * ux);
+
+    double tol = EPS * std::max(1.0, r);
+    if (perp > r + tol) return;
+    double h = (perp > r - tol) ? 0.0 : std::sqrt((r - perp) * (r + perp));
+
+    auto check = [&](double s) {
+        if (s < -POINT_EPS || s > L + POINT_EPS) return;
+        Points p(a1.getX() + s * ux, a1.getY() + s * uy);
+        if (arc.PointOnArc(p, c)) AddUniquePoint(result, p);
+    };
+
+    check(proj - h);
+    if (h > 0) check(proj + h);
+}
+
+// ---------- дуга / дуга ----------
+void IntersectArcs(const Mirror& m1, const Mirror& m2,
+                   std::vector<Points>& result) {
+    Points c1 = m1.CircleCenter();
+    Points c2 = m2.CircleCenter();
+    double r1 = std::abs(m1.getRad());
+    double r2 = std::abs(m2.getRad());
+
+    double dx = c2.getX() - c1.getX();
+    double dy = c2.getY() - c1.getY();
+    double d = std::sqrt(dx * dx + dy * dy);
+    double tol = EPS * std::max(1.0, std::max(r1, r2));
+
+    if (d < POINT_EPS) {
+        if (std::abs(r1 - r2) < POINT_EPS) {
+            if (m1.PointOnArc(m2.getStart(), c1)) AddUniquePoint(result, m2.getStart());
+            if (m1.PointOnArc(m2.getEnd(),   c1)) AddUniquePoint(result, m2.getEnd());
+            if (m2.PointOnArc(m1.getStart(), c2)) AddUniquePoint(result, m1.getStart());
+            if (m2.PointOnArc(m1.getEnd(),   c2)) AddUniquePoint(result, m1.getEnd());
+        }
+        return;
+    }
+
+    if (d > r1 + r2 + tol) return;
+    if (d < std::abs(r1 - r2) - tol) return;
+
+    double a = (r1 * r1 - r2 * r2 + d * d) / (2.0 * d);
+    double hSq = r1 * r1 - a * a;
+    double h = hSq > 0 ? std::sqrt(hSq) : 0.0;
+
+    double px = c1.getX() + a * dx / d;
+    double py = c1.getY() + a * dy / d;
+
+    Points p1(px + h * dy / d, py - h * dx / d);
+    Points p2(px - h * dy / d, py + h * dx / d);
+
+    if (m1.PointOnArc(p1, c1) && m2.PointOnArc(p1, c2)) AddUniquePoint(result, p1);
+    if (m1.PointOnArc(p2, c1) && m2.PointOnArc(p2, c2)) AddUniquePoint(result, p2);
+}
 } // namespace
 
 
@@ -424,22 +425,27 @@ static void drawCircularArc(
 
     delta = std::abs(delta) * (centerLeft ? 1.0 : -1.0);
 
-    const QRectF rect(
-        cx - radius,
-        cy - radius,
-        2.0 * radius,
-        2.0 * radius
-        );
-
     /*
-     * Qt: углы в 1/16 градуса, положительное направление -
-     * против часовой стрелки (ось Y экрана направлена вниз,
-     * поэтому знак меняется).
+     * Дуга рисуется ломаной: точки считаются в double, а концы ставятся
+     * ровно в вершины. delta уже содержит знак обхода (в тех же углах atan2,
+     * что и startAngle), поэтому пересчитывать направление под Qt не нужно.
      */
-    const int start = qRound(-startAngle * 180.0 / pi * 16.0);
-    const int span  = qRound(-delta      * 180.0 / pi * 16.0);
+    const double arcLength = std::abs(delta) * radius;
+    int segments = static_cast<int>(std::ceil(arcLength / MirrorDraw::SegmentLength));
+    segments = std::max(segments, MirrorDraw::MinSegments);
+    segments = std::min(segments, MirrorDraw::MaxSegments);
 
-    painter.drawArc(rect, start, span);
+    QPolygonF poly;
+    poly.reserve(segments + 1);
+    for (int k = 0; k <= segments; ++k)
+    {
+        const double a = startAngle + delta * static_cast<double>(k) / segments;
+        poly << QPointF(cx + radius * std::cos(a), cy + radius * std::sin(a));
+    }
+    poly.first() = QPointF(x1, y1);
+    poly.last()  = QPointF(x2, y2);
+
+    painter.drawPolyline(poly);
 }
 
 

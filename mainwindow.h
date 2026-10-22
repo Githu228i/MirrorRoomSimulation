@@ -59,6 +59,7 @@ public:
     void OnDelayFinished();                  // задержка закончилась - следующее отражение
     void ShowSimControls(bool on);           // показать/скрыть настройки симуляции (ползунки, галочка, поле)
     void CommitTraceLimit();                 // применить число из поля «Макс. кол-во отражений»
+    bool TraceLimitBlocked() const;          // поле «Макс. кол-во отражений» недоступно (настройки заблокированы или галочка выключена)
 
 private:
     Ui::MainWindow *ui;
@@ -79,5 +80,6 @@ private:
     bool   eraseOld_ = Style::EraseOldDefault;              // удалять старые отражения (галочка)
     int    traceLimit_ = Style::TraceLimitDefault;          // сколько последних отражений остаётся на экране
     QString lastSaveDir_;                                   // папка последнего сохранения истории
+    int     saveDecimals_ = Style::SaveDecimals;            // знаков после запятой в координатах при сохранении
 };
 #endif // MAINWINDOW_H

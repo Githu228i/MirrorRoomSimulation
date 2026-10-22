@@ -1,5 +1,6 @@
 MirrorRoomSimulation_autogen/timestamp: \
   /home/vladimir/MirrorRoomSimulation/CMakeLists.txt \
+  /home/vladimir/MirrorRoomSimulation/Darktheme.h \
   /home/vladimir/MirrorRoomSimulation/backendoperators.cpp \
   /home/vladimir/MirrorRoomSimulation/backendoperators.h \
   /home/vladimir/MirrorRoomSimulation/beamangledialog.cpp \
@@ -24,6 +25,8 @@ MirrorRoomSimulation_autogen/timestamp: \
   /home/vladimir/MirrorRoomSimulation/points.h \
   /home/vladimir/MirrorRoomSimulation/polygon.cpp \
   /home/vladimir/MirrorRoomSimulation/polygon.h \
+  /home/vladimir/MirrorRoomSimulation/savehistorydialog.cpp \
+  /home/vladimir/MirrorRoomSimulation/savehistorydialog.h \
   /usr/bin/cmake \
   /usr/include/alloca.h \
   /usr/include/asm-generic/errno-base.h \
@@ -335,6 +338,7 @@ MirrorRoomSimulation_autogen/timestamp: \
   /usr/include/x86_64-linux-gnu/qt6/QtCore/QRect \
   /usr/include/x86_64-linux-gnu/qt6/QtCore/QSize \
   /usr/include/x86_64-linux-gnu/qt6/QtCore/QSizeF \
+  /usr/include/x86_64-linux-gnu/qt6/QtCore/QString \
   /usr/include/x86_64-linux-gnu/qt6/QtCore/QVector \
   /usr/include/x86_64-linux-gnu/qt6/QtCore/qalgorithms.h \
   /usr/include/x86_64-linux-gnu/qt6/QtCore/qanystringview.h \

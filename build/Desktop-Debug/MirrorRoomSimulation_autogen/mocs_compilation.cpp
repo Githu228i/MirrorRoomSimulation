@@ -3,3 +3,4 @@
 #include "EWIEGA46WW/moc_changeorconnectdialog.cpp"
 #include "EWIEGA46WW/moc_changepointdialog.cpp"
 #include "EWIEGA46WW/moc_mainwindow.cpp"
+#include "EWIEGA46WW/moc_savehistorydialog.cpp"

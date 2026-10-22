@@ -32,6 +32,8 @@ qt_add_executable(MirrorRoomSimulation
     changeorconnectdialog.h changeorconnectdialog.cpp
     changepointdialog.h changepointdialog.cpp
     beamangledialog.h beamangledialog.cpp
+    savehistorydialog.h savehistorydialog.cpp
+    Darktheme.h
 )
 
 qt_add_translations(MirrorRoomSimulation

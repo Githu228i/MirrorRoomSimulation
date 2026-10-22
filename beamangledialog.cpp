@@ -2,9 +2,12 @@
 
 #include <QLabel>
 #include <QDoubleSpinBox>
+#include <QLineEdit>
 #include <QPushButton>
 #include <QVBoxLayout>
 #include <QHBoxLayout>
+#include <QEvent>
+#include <QKeyEvent>
 
 BeamAngleDialog::BeamAngleDialog(QWidget *parent, double initialAngle)
     : QDialog(parent)
@@ -55,9 +58,11 @@ BeamAngleDialog::BeamAngleDialog(QWidget *parent, double initialAngle)
     titleLabel->setStyleSheet("font-size: 20px; font-weight: bold;");
 
     hintLabel = new QLabel(
-        "Угол между стеной и лучом (в сторону комнаты). "
-        "90° - перпендикулярно стене. "
-        "Для кривой стены берётся касательная в точке луча.",
+        QString("Угол между стеной и лучом (в сторону комнаты), от %1° до %2° включительно. "
+                "90° - перпендикулярно стене. "
+                "Для кривой стены берётся касательная в точке луча.")
+            .arg(BeamAngle::Min, 0, 'f', BeamAngle::Decimals)
+            .arg(BeamAngle::Max, 0, 'f', BeamAngle::Decimals),
         this
         );
     hintLabel->setAlignment(Qt::AlignCenter);
@@ -66,10 +71,17 @@ BeamAngleDialog::BeamAngleDialog(QWidget *parent, double initialAngle)
     QLabel *angleLabel = new QLabel("Угол:", this);
 
     angleSpinBox = new QDoubleSpinBox(this);
-    angleSpinBox->setRange(0.1, 179.9);
-    angleSpinBox->setDecimals(2);
+    angleSpinBox->setDecimals(BeamAngle::Decimals);   // сначала знаки, потом диапазон
+    angleSpinBox->setRange(BeamAngle::Min, BeamAngle::Max);
     angleSpinBox->setSuffix("°");
     angleSpinBox->setValue(initialAngle);
+
+    // Enter в поле обрабатываем сами (см. eventFilter): иначе спинбокс молча
+    // подменит недопустимый ввод прежним значением
+    // (lineEdit() у QAbstractSpinBox защищён, поэтому ищем поле как дочерний виджет)
+    angleEdit = angleSpinBox->findChild<QLineEdit *>();
+    if (angleEdit)
+        angleEdit->installEventFilter(this);
 
     QHBoxLayout *angleLayout = new QHBoxLayout;
     angleLayout->addWidget(angleLabel);
@@ -77,6 +89,13 @@ BeamAngleDialog::BeamAngleDialog(QWidget *parent, double initialAngle)
 
     cancelButton = new QPushButton("Отмена", this);
     okButton = new QPushButton("Задать", this);
+
+    // Кнопки не берут фокус: иначе при клике спинбокс теряет фокус и успевает
+    // молча заменить недопустимый ввод (например, 0) прежним значением
+    cancelButton->setFocusPolicy(Qt::NoFocus);
+    okButton->setFocusPolicy(Qt::NoFocus);
+    cancelButton->setAutoDefault(false);
+    okButton->setAutoDefault(false);
 
     QHBoxLayout *buttonsLayout = new QHBoxLayout;
     buttonsLayout->addStretch();
@@ -101,9 +120,44 @@ BeamAngleDialog::BeamAngleDialog(QWidget *parent, double initialAngle)
             this, &BeamAngleDialog::applyChanges);
 }
 
+bool BeamAngleDialog::eventFilter(QObject *obj, QEvent *event)
+{
+    if (angleEdit && obj == angleEdit && event->type() == QEvent::KeyPress)
+    {
+        const int key = static_cast<QKeyEvent *>(event)->key();
+        if (key == Qt::Key_Return || key == Qt::Key_Enter)
+        {
+            applyChanges();
+            return true;
+        }
+    }
+    return QDialog::eventFilter(obj, event);
+}
+
+// Проверяет именно набранный текст (а не последнее "принятое" значение спинбокса).
+// Недопустимый угол: диалог остаётся открытым, сообщение об ошибке уходит в чат.
 void BeamAngleDialog::applyChanges()
 {
-    angle_ = angleSpinBox->value();
+    const QString typed = angleSpinBox->cleanText().trimmed();
+
+    QString normalized = typed;
+    normalized.replace(',', '.');
+
+    bool ok = false;
+    const double value = normalized.toDouble(&ok);
+
+    if (!ok || value < BeamAngle::Min || value > BeamAngle::Max)
+    {
+        emit invalidAngle(
+            QString("Угол должен быть числом от %1° до %2° включительно (введено «%3»). "
+                    "Значение не принято: исправьте угол.")
+                .arg(BeamAngle::Min, 0, 'f', BeamAngle::Decimals)
+                .arg(BeamAngle::Max, 0, 'f', BeamAngle::Decimals)
+                .arg(typed.isEmpty() ? QString("пусто") : typed));
+        return;
+    }
+
+    angle_ = value;
     accept();
 }
 

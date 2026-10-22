@@ -5,11 +5,16 @@
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 
-ChangeOrConnectDialog::ChangeOrConnectDialog(QWidget *parent)
+namespace {
+constexpr int DialogWidth  = 480;   // под три кнопки: «Изменить», «Подключить», «Удалить»
+constexpr int DialogHeight = 200;
+}
+
+ChangeOrConnectDialog::ChangeOrConnectDialog(QWidget *parent, bool canChange, bool canConnect)
     : QDialog(parent)
 {
     setWindowFlags(Qt::Dialog | Qt::FramelessWindowHint);
-    setFixedSize(400, 200);
+    setFixedSize(DialogWidth, DialogHeight);
 
     setStyleSheet(R"(
         QDialog {
@@ -39,6 +44,12 @@ ChangeOrConnectDialog::ChangeOrConnectDialog(QWidget *parent)
         QPushButton:pressed {
             background-color: #303134;
         }
+
+        QPushButton:disabled,
+        QPushButton:disabled:hover {
+            background-color: #252525;
+            color: #777777;
+        }
     )");
 
     textLabel = new QLabel(
@@ -51,12 +62,18 @@ ChangeOrConnectDialog::ChangeOrConnectDialog(QWidget *parent)
 
     button1 = new QPushButton("Изменить", this);
     button2 = new QPushButton("Подключить", this);
+    button3 = new QPushButton("Удалить", this);
+
+    // Действие, невозможное для этой точки, гасим
+    button1->setEnabled(canChange);
+    button2->setEnabled(canConnect);
 
     QHBoxLayout *buttonLayout = new QHBoxLayout;
 
     buttonLayout->addStretch();
     buttonLayout->addWidget(button1);
     buttonLayout->addWidget(button2);
+    buttonLayout->addWidget(button3);
     buttonLayout->addStretch();
 
     QVBoxLayout *mainLayout = new QVBoxLayout(this);
@@ -71,7 +88,10 @@ ChangeOrConnectDialog::ChangeOrConnectDialog(QWidget *parent)
     connect(button1, &QPushButton::clicked,
             this, &QDialog::accept);
 
-    // "Подключить" возвращает код 2, чтобы отличить его от отмены (Esc = Rejected)
+    // "Подключить" и "Удалить" возвращают свои коды, чтобы отличить их от отмены (Esc = Rejected)
     connect(button2, &QPushButton::clicked,
-            this, [this]() { done(2); });
+            this, [this]() { done(ConnectCode); });
+
+    connect(button3, &QPushButton::clicked,
+            this, [this]() { done(DeleteCode); });
 }

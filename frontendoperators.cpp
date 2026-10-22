@@ -8,12 +8,16 @@
 
 namespace {
 
-// Тип зеркала: 0 - плоское, 1 - вогнутое, 2 - выпуклое
+constexpr double SamePointEps  = 1e-6;   // точки ближе этого считаются совпавшими (пиксели)
+constexpr double NoMoveEps     = 1e-9;   // смещение меньше этого - точка не сдвинулась
+constexpr int    WallScanSteps = 120;    // на сколько шагов делится стена при поиске наименьшего расстояния до другой
+
+// Тип зеркала (см. MirrorKind)
 int TypeOf(const Mirror &m)
 {
-    if (dynamic_cast<const ConcaveMirror *>(&m)) return 1;
-    if (dynamic_cast<const ConvexMirror *>(&m))  return 2;
-    return 0;
+    if (dynamic_cast<const ConcaveMirror *>(&m)) return MirrorKind::Concave;
+    if (dynamic_cast<const ConvexMirror *>(&m))  return MirrorKind::Convex;
+    return MirrorKind::Plane;
 }
 
 // Создаёт зеркало нужного типа. Если радиус меньше половины длины зеркала,
@@ -27,14 +31,14 @@ std::unique_ptr<Mirror> MakeMirror(int type,
 {
     if (flattened) *flattened = false;
 
-    if (type != 0 && !(radius >= a.Dist(b) / 2.0)) {
+    if (type != MirrorKind::Plane && !(radius >= a.Dist(b) / 2.0)) {
         if (flattened) *flattened = true;
-        type = 0;
+        type = MirrorKind::Plane;
     }
 
     switch (type) {
-    case 1:  return std::make_unique<ConcaveMirror>(a, b, radius);
-    case 2:  return std::make_unique<ConvexMirror>(a, b, radius);
+    case MirrorKind::Concave:  return std::make_unique<ConcaveMirror>(a, b, radius);
+    case MirrorKind::Convex:   return std::make_unique<ConvexMirror>(a, b, radius);
     default: return std::make_unique<PlaneMirror>(a, b);
     }
 }
@@ -42,7 +46,6 @@ std::unique_ptr<Mirror> MakeMirror(int type,
 // Одинаковое состояние луча: та же точка и то же направление
 bool SameState(const Beam &a, const Beam &b)
 {
-    const double pi = 3.14159265358979323846;
     const double posEps = 1e-3;     // пиксели
     const double angEps = 1e-5;     // радианы
 
@@ -50,12 +53,12 @@ bool SameState(const Beam &a, const Beam &b)
         std::abs(a.getY() - b.getY()) > posEps)
         return false;
 
-    return std::abs(std::remainder(a.getA() - b.getA(), 2.0 * pi)) <= angEps;
+    return std::abs(std::remainder(a.getA() - b.getA(), Math::TwoPi)) <= angEps;
 }
 
 QString Fmt(double v)
 {
-    return QString::number(v, 'f', 1);
+    return QString::number(v, 'f', Style::MessageDecimals);
 }
 
 QString PointStr(const Points &p)
@@ -66,8 +69,8 @@ QString PointStr(const Points &p)
 QString TypeName(const Mirror &m)
 {
     switch (TypeOf(m)) {
-    case 1:  return QString("вогнутое, R = %1").arg(Fmt(m.getRadius()));
-    case 2:  return QString("выпуклое, R = %1").arg(Fmt(m.getRadius()));
+    case MirrorKind::Concave:  return QString("вогнутое, R = %1").arg(Fmt(m.getRadius()));
+    case MirrorKind::Convex:   return QString("выпуклое, R = %1").arg(Fmt(m.getRadius()));
     default: return QString("плоское");
     }
 }
@@ -82,7 +85,6 @@ Points PointAt(const Mirror &m, double t)
         return Points(s.getX() + t * (e.getX() - s.getX()),
                       s.getY() + t * (e.getY() - s.getY()));
 
-    const double pi = 3.14159265358979323846;
     const Points c = m.CircleCenter();
     const double r = m.getRadius();
 
@@ -90,7 +92,7 @@ Points PointAt(const Mirror &m, double t)
     const double a1 = std::atan2(e.getY() - c.getY(), e.getX() - c.getX());
 
     // Меньшая дуга; центр слева от хорды - обход против часовой, справа - по часовой
-    double delta = std::abs(std::remainder(a1 - a0, 2.0 * pi));
+    double delta = std::abs(std::remainder(a1 - a0, Math::TwoPi));
     if (m.getRad() < 0) delta = -delta;
 
     const double ang = a0 + t * delta;
@@ -101,13 +103,12 @@ Points PointAt(const Mirror &m, double t)
 // с шагом, до другого считается точное расстояние (концы входят в выборку)
 double WallDistance(const Mirror &a, const Mirror &b)
 {
-    const int N = 120;
-    double best = 1e18;
+    double best = std::numeric_limits<double>::max();
 
     auto scan = [&](const Mirror &from, const Mirror &to) {
-        for (int k = 0; k <= N; ++k) {
+        for (int k = 0; k <= WallScanSteps; ++k) {
             double d = 0.0;
-            to.ClosestPoint(PointAt(from, static_cast<double>(k) / N), d);
+            to.ClosestPoint(PointAt(from, static_cast<double>(k) / WallScanSteps), d);
             best = std::min(best, d);
         }
     };
@@ -164,7 +165,7 @@ WallCheck CheckWalls(const std::vector<const Mirror *> &w,
             for (const Points &p : w[i]->Intersections(*w[j])) {
                 bool ok = false;
                 for (const Points &q : allowed) {
-                    if (p.Dist(q) < 1e-6) { ok = true; break; }
+                    if (p.Dist(q) < SamePointEps) { ok = true; break; }
                 }
                 if (!ok) {
                     if (a) *a = i;
@@ -203,10 +204,12 @@ void FrontEndOperators::Notify(NoteLevel level, const QString &text) const
 }
 
 void FrontEndOperators::CreatePoint(double x, double y) {
-    if (prototype.sides_.size() >= 8) {
+    // До замыкания стен на одну меньше: замыкающая добавится при замыкании комнаты
+    if (static_cast<int>(prototype.sides_.size()) >= Limits::MaxWalls - 1) {
         Notify(NoteLevel::Warning,
-               "Достигнут предел: в комнате не больше 9 сторон. "
-               "Новую точку поставить нельзя, замкните комнату.");
+               QString("Достигнут предел: в комнате не больше %1 сторон. "
+                       "Новую точку поставить нельзя, замкните комнату.")
+                   .arg(Limits::MaxWalls));
         return;
     }
 
@@ -271,11 +274,24 @@ void FrontEndOperators::ConnectPoints(int num)
     if (num < 0 || num >= static_cast<int>(prototype.sides_.size()))
         return;
 
+    // Комната должна остаться многоугольником: не меньше Limits::MinWalls сторон
+    // (первые num стен при соединении удаляются, добавляется замыкающая)
+    const int resultWalls = static_cast<int>(prototype.sides_.size()) - num + 1;
+    if (resultWalls < Limits::MinWalls) {
+        Notify(NoteLevel::Error,
+               QString("Нельзя замкнуть комнату: получится сторон: %1, а нужно от %2 до %3. "
+                       "Подключите более раннюю точку или поставьте ещё точки.")
+                   .arg(resultWalls)
+                   .arg(Limits::MinWalls)
+                   .arg(Limits::MaxWalls));
+        return;
+    }
+
     Points start = prototype.sides_[num]->getStart();
     Points end = prototype.sides_.back()->getEnd();
 
     // Замыкающая стена нулевой длины невозможна
-    if (start.Dist(end) < 1e-6) {
+    if (start.Dist(end) < SamePointEps) {
         Notify(NoteLevel::Error,
                "Нельзя замкнуть комнату: начальная и конечная точки совпадают.");
         return;
@@ -337,7 +353,8 @@ void FrontEndOperators::DeleteLast() {
     if (prototype.sides_.empty()) {
         if (prototype.isExist()) {
             prototype.isExist_ = false;
-            Notify(NoteLevel::Info, "Первая точка удалена.");
+            Notify(NoteLevel::Info,
+                   QString("Первая точка 1 %1 удалена.").arg(PointStr(prototype.first)));
         } else {
             Notify(NoteLevel::Warning, "Откатывать нечего: точек нет.");
         }
@@ -351,13 +368,206 @@ void FrontEndOperators::DeleteLast() {
                    "Источник луча удалён вместе со стеной, на которой он стоял.");
         }
 
+        const Points lastPoint = prototype.sides_.back()->getEnd();
+        const int lastPointNo = static_cast<int>(prototype.sides_.size()) + 1;
+
         prototype.sides_.pop_back();
         prototype.isCycled_ = false;
 
         Notify(NoteLevel::Info,
-               wasCycled ? "Замыкающая стена удалена: комната снова не замкнута."
-                         : "Последняя точка удалена.");
+               wasCycled ? QString("Замыкающая стена удалена: комната снова не замкнута.")
+                         : QString("Последняя точка %1 %2 удалена.")
+                               .arg(lastPointNo)
+                               .arg(PointStr(lastPoint)));
     }
+}
+
+void FrontEndOperators::DeletePoint(int num)
+{
+    auto &sides = prototype.sides_;
+    const int n = static_cast<int>(sides.size());
+    const bool cycled = prototype.isCycled_;
+
+    // Замкнутая комната: вершин ровно столько же, сколько стен (num: 0..n-1)
+    if (!prototype.isExist() || num < 0 || num > n || (cycled && num >= n)) {
+        Notify(NoteLevel::Error, "Не удалось удалить точку: такой точки нет.");
+        return;
+    }
+
+    // После удаления в замкнутой комнате должно остаться не меньше Limits::MinWalls вершин
+    if (cycled && n - 1 < Limits::MinWalls) {
+        Notify(NoteLevel::Error,
+               QString("Нельзя удалить точку: в замкнутой комнате должно остаться не меньше %1 вершин "
+                       "(сейчас их %2).")
+                   .arg(Limits::MinWalls)
+                   .arg(n));
+        return;
+    }
+
+    const int pointNo = num + 1;
+    const Points oldPoint = (num < n)  ? sides[num]->getStart()
+                            : (n > 0)  ? sides.back()->getEnd()
+                                      : prototype.first;
+
+    // Если на исчезающей стене (с нуля) стоял луч - он удаляется
+    auto dropBeamIfOn = [&](int lo, int hi) {
+        if (prototype.isBeamSet_ && prototype.beamWall_ >= lo && prototype.beamWall_ <= hi) {
+            prototype.isBeamSet_ = false;
+            Notify(NoteLevel::Warning,
+                   "Источник луча удалён вместе со стеной, на которой он стоял.");
+        }
+    };
+
+    if (!cycled) {
+        // 1. Единственная точка: комнаты больше нет
+        if (n == 0) {
+            prototype.isExist_ = false;
+            prototype.first = Points();
+            Notify(NoteLevel::Info,
+                   QString("Единственная точка 1 %1 удалена.").arg(PointStr(oldPoint)));
+            return;
+        }
+
+        // 2. Последняя точка: исчезает последняя стена
+        if (num == n) {
+            dropBeamIfOn(n - 1, n - 1);
+            sides.pop_back();
+            Notify(NoteLevel::Info,
+                   QString("Точка %1 %2 удалена вместе со стеной %3.")
+                       .arg(pointNo)
+                       .arg(PointStr(oldPoint))
+                       .arg(n));
+            return;
+        }
+
+        // 3. Первая точка: исчезает первая стена, первой становится её конец
+        if (num == 0) {
+            const Points newFirst = sides[0]->getEnd();
+            dropBeamIfOn(0, 0);
+            if (prototype.isBeamSet_)
+                --prototype.beamWall_;   // все стены сдвигаются на одну
+            sides.erase(sides.begin());
+            prototype.first = newFirst;
+            Notify(NoteLevel::Info,
+                   QString("Точка 1 %1 удалена вместе со стеной 1. Первой стала бывшая точка 2 %2.")
+                       .arg(PointStr(oldPoint))
+                       .arg(PointStr(newFirst)));
+            return;
+        }
+    }
+
+    // 4. Вершина с двумя соседями (средняя точка незамкнутой комнаты или любая
+    //    вершина замкнутой): стены prev и num заменяются одной плоской стеной между соседями
+    const int prev = (num - 1 + n) % n;
+    const Points a = sides[prev]->getStart();
+    const Points b = sides[num]->getEnd();
+
+    std::unique_ptr<PlaneMirror> merged;
+    try {
+        merged = std::make_unique<PlaneMirror>(a, b);
+    } catch (const std::exception &e) {
+        Notify(NoteLevel::Error,
+               QString("Не удалось удалить точку %1: %2")
+                   .arg(pointNo)
+                   .arg(QString::fromUtf8(e.what())));
+        return;
+    }
+
+    // Набор стен после удаления: oldIdx[k] - прежний индекс стены (-1 - новая стена)
+    std::vector<const Mirror *> w;
+    std::vector<int> oldIdx;
+    int mergedPos = 0;
+
+    if (cycled && num == 0) {
+        // стена 0 исчезает, на месте последней стоит новая (она заканчивается там же, где кончалась стена 0)
+        for (int i = 1; i < n - 1; ++i) {
+            w.push_back(sides[i].get());
+            oldIdx.push_back(i);
+        }
+        mergedPos = static_cast<int>(w.size());
+        w.push_back(merged.get());
+        oldIdx.push_back(-1);
+    } else {
+        for (int i = 0; i < n; ++i) {
+            if (i == num) continue;
+            if (i == num - 1) {
+                mergedPos = static_cast<int>(w.size());
+                w.push_back(merged.get());
+                oldIdx.push_back(-1);
+            } else {
+                w.push_back(sides[i].get());
+                oldIdx.push_back(i);
+            }
+        }
+    }
+
+    // Номера соседних точек для сообщений (с единицы)
+    const int prevPointNo = prev + 1;
+    const int nextPointNo = cycled ? (num + 1) % n + 1 : num + 2;
+
+    int x = 0, y = 0;
+    const WallCheck res = CheckWalls(w, cycled, {mergedPos}, &x, &y);
+    if (res != WallCheck::Ok) {
+        const int other = (x == mergedPos) ? y : x;
+        const int otherNo = oldIdx[other] + 1;   // номер в прежней нумерации
+
+        if (res == WallCheck::Cross) {
+            Notify(NoteLevel::Error,
+                   QString("Нельзя удалить точку %1: новая стена между точками %2 и %3 "
+                           "пересечёт или коснётся стены %4.")
+                       .arg(pointNo)
+                       .arg(prevPointNo)
+                       .arg(nextPointNo)
+                       .arg(otherNo));
+        } else {
+            Notify(NoteLevel::Error,
+                   QString("Нельзя удалить точку %1: новая стена между точками %2 и %3 "
+                           "окажется слишком близко к стене %4 (ближе толщины линии, %5 пикселей).")
+                       .arg(pointNo)
+                       .arg(prevPointNo)
+                       .arg(nextPointNo)
+                       .arg(otherNo)
+                       .arg(Style::WallWidth));
+        }
+        return;
+    }
+
+    // Применяем
+    dropBeamIfOn(prev, prev);
+    dropBeamIfOn(num, num);
+
+    if (prototype.isBeamSet_) {
+        // индекс стены с лучом в новой нумерации
+        for (int j = 0; j < static_cast<int>(oldIdx.size()); ++j) {
+            if (oldIdx[j] == prototype.beamWall_) {
+                prototype.beamWall_ = j;
+                break;
+            }
+        }
+    }
+
+    std::vector<std::unique_ptr<Mirror>> result;
+    result.reserve(oldIdx.size());
+    for (int k : oldIdx) {
+        if (k < 0) result.push_back(std::move(merged));
+        else       result.push_back(std::move(sides[k]));
+    }
+    sides = std::move(result);
+
+    if (cycled && num == 0)
+        prototype.first = sides[0]->getStart();   // первой стала прежняя вторая вершина
+
+    Notify(NoteLevel::Info,
+           QString("Точка %1 %2 удалена. Стены %3 и %4 заменены одной плоской стеной между "
+                   "бывшими точками %5 %6 и %7 %8.")
+               .arg(pointNo)
+               .arg(PointStr(oldPoint))
+               .arg(prev + 1)
+               .arg(num + 1)
+               .arg(prevPointNo)
+               .arg(PointStr(a))
+               .arg(nextPointNo)
+               .arg(PointStr(b)));
 }
 
 void FrontEndOperators::ChangeMirror(
@@ -538,7 +748,7 @@ void FrontEndOperators::ChangeMirror(
         }
     }
 
-    if (newPoint.Dist(oldPoint) > 1e-9) {
+    if (newPoint.Dist(oldPoint) > NoMoveEps) {
         Notify(NoteLevel::Info,
                QString("Точка %1 перемещена: %2 -> %3.")
                    .arg(pointNo)
@@ -551,6 +761,25 @@ void FrontEndOperators::ChangeMirror(
                    .arg(items[0].idx + 1)
                    .arg(TypeName(*sides[items[0].idx])));
     }
+}
+
+// Запоминает комнату (вершины, типы и радиусы стен) и параметры источника луча
+TraceSnapshot FrontEndOperators::MakeSnapshot() const
+{
+    TraceSnapshot s;
+
+    for (const auto &m : prototype.sides_) {
+        TraceSnapshot::Wall w;
+        w.x = m->getStart().getX();
+        w.y = m->getStart().getY();
+        w.type = TypeOf(*m);
+        w.radius = std::abs(m->getRadius());
+        s.walls.push_back(w);
+    }
+
+    s.beamWall = static_cast<int>(prototype.beamWall_);
+    s.beamWallAngle = prototype.beamWallAngle_;
+    return s;
 }
 
 bool FrontEndOperators::NextReflection()
@@ -572,11 +801,12 @@ bool FrontEndOperators::NextReflection()
         tempBeam_ = prototype.beam_;
         history_.assign(1, Points(tempBeam_.getX(), tempBeam_.getY()));
         states_.assign(1, tempBeam_);
+        snapshot_ = MakeSnapshot();
         traceCleared_ = false;
     }
 
     auto result = prototype.TraceBeamIter(tempBeam_);
-    if (result.second.Dist(history_.back()) < 1e-9) {
+    if (result.second.Dist(history_.back()) < NoMoveEps) {
         Notify(NoteLevel::Error,
                "Не удалось найти следующее отражение: луч никуда не попал.");
         return false;
