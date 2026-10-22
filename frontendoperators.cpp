@@ -5,7 +5,12 @@
 #include <algorithm>
 #include <vector>
 #include <cmath>
+#include <string>
+#include <sstream>
+#include <locale>
+#include <limits>
 #include "constants.h"
+#include "beamangledialog.h"   // BeamAngle::Min / Max / Decimals
 
 using namespace FeEps;
 namespace {
@@ -190,6 +195,243 @@ WallCheck CheckWalls(const std::vector<const Mirror *> &w,
         }
     }
     return WallCheck::Ok;
+}
+
+} // namespace
+
+// ============================================================
+// Загрузка комнаты из файла: разбор строк
+// ============================================================
+namespace {
+
+using U32 = std::u32string;
+
+bool IsSpaceCh(char32_t c)  { return c == U' ' || c == U'\t' || c == 0x00A0 || c == 0xFEFF; }
+bool IsDigitCh(char32_t c)  { return c >= U'0' && c <= U'9'; }
+// буква строчная (текст приводится к нижнему регистру заранее)
+bool IsLetterCh(char32_t c) { return (c >= U'a' && c <= U'z') || (c >= 0x0430 && c <= 0x044F) || c == 0x0451; }
+
+// Нижний регистр для латиницы и кириллицы
+char32_t LowerCh(char32_t c)
+{
+    if (c >= U'A' && c <= U'Z')       return c + 32;
+    if (c >= 0x0410 && c <= 0x042F)   return c + 0x20;   // А-Я -> а-я
+    if (c >= 0x0400 && c <= 0x040F)   return c + 0x50;   // Ё и др. -> ё и др.
+    return c;
+}
+
+U32 Lowered(const U32 &s)
+{
+    U32 r = s;
+    for (char32_t &c : r) c = LowerCh(c);
+    return r;
+}
+
+// UTF-8 -> UTF-32; повреждённые байты заменяются на U+FFFD
+U32 DecodeUtf8(const std::string &s)
+{
+    U32 out;
+    out.reserve(s.size());
+    const size_t n = s.size();
+    size_t i = 0;
+    while (i < n) {
+        const unsigned char c = static_cast<unsigned char>(s[i]);
+        char32_t cp = 0xFFFD;
+        size_t extra = 0;
+        if (c < 0x80)                  { cp = c; }
+        else if ((c & 0xE0) == 0xC0)   { extra = 1; cp = c & 0x1F; }
+        else if ((c & 0xF0) == 0xE0)   { extra = 2; cp = c & 0x0F; }
+        else if ((c & 0xF8) == 0xF0)   { extra = 3; cp = c & 0x07; }
+
+        size_t step = 1;
+        if (extra > 0) {
+            bool ok = (i + extra < n);
+            for (size_t k = 1; ok && k <= extra; ++k) {
+                const unsigned char cc = static_cast<unsigned char>(s[i + k]);
+                if ((cc & 0xC0) != 0x80) ok = false;
+                else cp = (cp << 6) | (cc & 0x3F);
+            }
+            if (ok) step = extra + 1;
+            else    cp = 0xFFFD;
+        }
+        out.push_back(cp);
+        i += step;
+    }
+    return out;
+}
+
+// Разделение на строки (\n, \r\n и \r)
+std::vector<U32> SplitLines(const U32 &t)
+{
+    std::vector<U32> lines;
+    U32 cur;
+    for (size_t i = 0; i < t.size(); ++i) {
+        const char32_t c = t[i];
+        if (c == U'\n' || c == U'\r') {
+            if (c == U'\r' && i + 1 < t.size() && t[i + 1] == U'\n') ++i;
+            lines.push_back(cur);
+            cur.clear();
+        } else {
+            cur.push_back(c);
+        }
+    }
+    lines.push_back(cur);
+    return lines;
+}
+
+size_t SkipSpaces(const U32 &s, size_t p)
+{
+    while (p < s.size() && IsSpaceCh(s[p])) ++p;
+    return p;
+}
+
+bool StartsWith(const U32 &s, size_t p, const U32 &lit)
+{
+    return p <= s.size() && s.compare(p, lit.size(), lit) == 0;
+}
+
+// Есть ли в строке (уже в нижнем регистре) фраза «слово1 слово2 ... :»:
+// слова через пробелы, двоеточие после необязательных пробелов, перед первым словом не буква
+bool HasPhrase(const U32 &low, const std::vector<U32> &words)
+{
+    for (size_t start = 0; start < low.size(); ++start) {
+        if (start > 0 && IsLetterCh(low[start - 1])) continue;
+
+        size_t p = start;
+        bool ok = true;
+        for (size_t w = 0; w < words.size(); ++w) {
+            if (w > 0) {
+                const size_t before = p;
+                p = SkipSpaces(low, p);
+                if (p == before) { ok = false; break; }
+            }
+            if (!StartsWith(low, p, words[w])) { ok = false; break; }
+            p += words[w].size();
+        }
+        if (!ok) continue;
+
+        p = SkipSpaces(low, p);
+        if (p < low.size() && low[p] == U':') return true;
+    }
+    return false;
+}
+
+// Число с позиции pos: цифры, затем (необязательно) точка или запятая и цифры.
+// Знак не учитывается: минус - посторонний символ. false - на pos нет цифры.
+bool ParseNumberAt(const U32 &s, size_t pos, double &value, size_t &end)
+{
+    if (pos >= s.size() || !IsDigitCh(s[pos])) return false;
+
+    std::string txt;
+    size_t p = pos;
+    while (p < s.size() && IsDigitCh(s[p])) txt.push_back(static_cast<char>(s[p++]));
+    if (p + 1 < s.size() && (s[p] == U'.' || s[p] == U',') && IsDigitCh(s[p + 1])) {
+        txt.push_back('.');
+        ++p;
+        while (p < s.size() && IsDigitCh(s[p])) txt.push_back(static_cast<char>(s[p++]));
+    }
+
+    std::istringstream iss(txt);
+    iss.imbue(std::locale::classic());   // не зависит от настроек системы
+    double v = 0.0;
+    if (!(iss >> v)) v = std::numeric_limits<double>::infinity();   // слишком длинное число
+
+    value = v;
+    end = p;
+    return true;
+}
+
+// Все числа строки по порядку
+std::vector<double> ExtractNumbers(const U32 &s)
+{
+    std::vector<double> r;
+    size_t p = 0;
+    while (p < s.size()) {
+        double v = 0.0;
+        size_t e = p;
+        if (ParseNumberAt(s, p, v, e)) { r.push_back(v); p = e; }
+        else                           { ++p; }
+    }
+    return r;
+}
+
+// «тип: вогнутое(N)» / «тип: выпуклое(N)» / «тип: выгнутое(N)» с позиции pos (строка в нижнем регистре).
+// Радиус обязан стоять в скобках сразу после названия типа, иначе фраза не считается.
+bool MatchTypePhrase(const U32 &low, size_t pos, int &type, double &radius)
+{
+    size_t p = pos;
+    if (!StartsWith(low, p, U"тип")) return false;
+    p += 3;
+    p = SkipSpaces(low, p);
+    if (p >= low.size() || low[p] != U':') return false;
+    ++p;
+    p = SkipSpaces(low, p);
+
+    int t = MirrorKind::Plane;
+    if      (StartsWith(low, p, U"вогнут")) t = MirrorKind::Concave;
+    else if (StartsWith(low, p, U"выпукл")) t = MirrorKind::Convex;
+    else if (StartsWith(low, p, U"выгнут")) t = MirrorKind::Convex;
+    else return false;
+    p += 6;
+
+    if (StartsWith(low, p, U"ое") || StartsWith(low, p, U"ая")) p += 2;
+    else return false;
+
+    p = SkipSpaces(low, p);
+    if (p >= low.size() || low[p] != U'(') return false;
+    ++p;
+    p = SkipSpaces(low, p);
+
+    double r = 0.0;
+    size_t e = p;
+    if (!ParseNumberAt(low, p, r, e)) return false;
+    p = SkipSpaces(low, e);
+    if (p >= low.size() || low[p] != U')') return false;
+
+    type = t;
+    radius = r;
+    return true;
+}
+
+struct RoomLine
+{
+    double x = 0.0;
+    double y = 0.0;
+    int    type = MirrorKind::Plane;   // тип стены, которая идёт после этой точки
+    double radius = 0.0;
+};
+
+// Значащая строка с углом: ровно два числа (координаты), после них - необязательное
+// «тип: ...(N)». false - строка незначащая.
+bool ParseRoomLine(const U32 &line, RoomLine &out)
+{
+    const U32 low = Lowered(line);
+
+    size_t phrasePos = U32::npos;
+    int type = MirrorKind::Plane;
+    double radius = 0.0;
+    for (size_t i = 0; i < low.size(); ++i) {
+        if (low[i] == U'т' && MatchTypePhrase(low, i, type, radius)) { phrasePos = i; break; }
+    }
+
+    // Фраза про тип учитывается только строго после двух чисел; без неё (или с неверной
+    // записью) она просто текст, и числа считаются по всей строке
+    const U32 coordPart = (phrasePos == U32::npos) ? line : line.substr(0, phrasePos);
+    const std::vector<double> nums = ExtractNumbers(coordPart);
+    if (nums.size() != 2) return false;
+
+    out.x = nums[0];
+    out.y = nums[1];
+    if (phrasePos != U32::npos) {
+        out.type = type;
+        out.radius = radius;
+    }
+    return true;
+}
+
+QString FmtPrecise(double v)
+{
+    return QString::number(v, 'f', Style::PreciseDecimals);
 }
 
 } // namespace
@@ -842,4 +1084,243 @@ void FrontEndOperators::ResetTrace()
     // нетронутыми до первого нового отражения (см. NextReflection)
     traceCleared_ = true;
     looped_ = false;
+}
+
+
+LoadResult FrontEndOperators::LoadRoom(const std::string &utf8Text)
+{
+    U32 text = DecodeUtf8(utf8Text);
+    if (!text.empty() && text[0] == 0xFEFF)
+        text.erase(0, 1);   // метка порядка байтов UTF-8
+
+    bool blank = true;
+    for (char32_t c : text) {
+        if (!IsSpaceCh(c) && c != U'\n' && c != U'\r') { blank = false; break; }
+    }
+    if (blank) {
+        Notify(NoteLevel::Error, "Файл пуст: загружать нечего.");
+        return LoadResult::Failed;
+    }
+
+    const std::vector<U32> lines = SplitLines(text);
+    const int lineCount = static_cast<int>(lines.size());
+
+    // Строки с фразами (берётся первая такая строка)
+    int roomPhrase = -1;
+    int beamPhrase = -1;
+    for (int i = 0; i < lineCount; ++i) {
+        const U32 low = Lowered(lines[i]);
+        if (roomPhrase < 0 && HasPhrase(low, {U"углы", U"комнаты"})) roomPhrase = i;
+        if (beamPhrase < 0 && HasPhrase(low, {U"луч"}))              beamPhrase = i;
+    }
+    if (roomPhrase < 0 && beamPhrase < 0) {
+        Notify(NoteLevel::Error,
+               "В файле нет ни фразы «Углы комнаты:», ни фразы «Луч:»: загружать нечего.");
+        return LoadResult::Failed;
+    }
+
+    // ---------- Этап 1: структура файла (ошибки собираются все сразу) ----------
+    std::vector<QString> errors;
+
+    std::vector<RoomLine> room;
+    int skippedLines = 0;
+    if (roomPhrase < 0) {
+        errors.push_back("В файле нет фразы «Углы комнаты:».");
+    } else {
+        int i = roomPhrase + 1;
+        for (; i < lineCount && static_cast<int>(room.size()) < Limits::MaxWalls; ++i) {
+            RoomLine rl;
+            if (!ParseRoomLine(lines[i], rl)) break;   // первая незначащая строка обрывает список
+            room.push_back(rl);
+        }
+        if (static_cast<int>(room.size()) == Limits::MaxWalls) {
+            for (; i < lineCount; ++i) {
+                RoomLine extra;
+                if (!ParseRoomLine(lines[i], extra)) break;
+                ++skippedLines;
+            }
+        }
+        if (static_cast<int>(room.size()) < Limits::MinWalls) {
+            errors.push_back(
+                QString("После фразы «Углы комнаты:» найдено значащих строк: %1, а нужно не меньше %2 "
+                        "(не больше %3). Значащая строка - ровно два числа (координаты x и y), после них "
+                        "можно дописать «тип: вогнутое(R)» или «тип: выпуклое(R)». Такие строки должны "
+                        "идти подряд сразу после фразы.")
+                    .arg(static_cast<int>(room.size()))
+                    .arg(Limits::MinWalls)
+                    .arg(Limits::MaxWalls));
+        }
+    }
+
+    bool haveBeam = false;
+    double beamX = 0.0;
+    double beamY = 0.0;
+    double beamAngle = Limits::DefaultBeamAngle;
+    if (beamPhrase >= 0) {
+        bool ok = false;
+        if (beamPhrase + 1 < lineCount) {
+            const std::vector<double> nums = ExtractNumbers(lines[beamPhrase + 1]);
+            if (nums.size() == 2 || nums.size() == 3) {
+                ok = true;
+                beamX = nums[0];
+                beamY = nums[1];
+                if (nums.size() == 3) beamAngle = nums[2];
+            }
+        }
+        if (!ok) {
+            errors.push_back(
+                "После фразы «Луч:» нет значащей строки: сразу следующая строка должна содержать "
+                "2 числа (координаты источника) или 3 (ещё и угол к стене в градусах).");
+        } else if (!(beamAngle >= BeamAngle::Min && beamAngle <= BeamAngle::Max)) {
+            errors.push_back(
+                QString("Угол луча %1° вне допустимого диапазона: от %2° до %3° включительно.")
+                    .arg(QString::number(beamAngle, 'f', BeamAngle::Decimals))
+                    .arg(QString::number(BeamAngle::Min, 'f', BeamAngle::Decimals))
+                    .arg(QString::number(BeamAngle::Max, 'f', BeamAngle::Decimals)));
+        } else {
+            haveBeam = true;
+        }
+    }
+
+    if (!errors.empty()) {
+        for (const QString &e : errors) Notify(NoteLevel::Error, e);
+        return LoadResult::Failed;
+    }
+
+    // ---------- Этап 2: значения (тоже все сразу) ----------
+    const int n = static_cast<int>(room.size());
+    std::vector<Points> P;
+    for (const RoomLine &r : room) P.push_back(Points(r.x, r.y));
+
+    bool bad = false;
+
+    for (int i = 0; i < n; ++i) {
+        const double x = room[i].x;
+        const double y = room[i].y;
+        if (!(x >= Limits::MinX && x <= Limits::MaxX && y >= Limits::MinY && y <= Limits::MaxY)) {
+            Notify(NoteLevel::Error,
+                   QString("Точка %1 %2 вне рабочей области (допустимо: x от %3 до %4, y от %5 до %6).")
+                       .arg(i + 1)
+                       .arg(PointStr(P[i]))
+                       .arg(Fmt(Limits::MinX)).arg(Fmt(Limits::MaxX))
+                       .arg(Fmt(Limits::MinY)).arg(Fmt(Limits::MaxY)));
+            bad = true;
+        }
+    }
+
+    for (int i = 0; i < n; ++i) {
+        for (int j = i + 1; j < n; ++j) {
+            if (P[i].Dist(P[j]) < Limits::MinPointDist) {
+                Notify(NoteLevel::Error,
+                       QString("Точки %1 и %2 слишком близко друг к другу (ближе %3 пикселей).")
+                           .arg(i + 1).arg(j + 1)
+                           .arg(static_cast<int>(Limits::MinPointDist)));
+                bad = true;
+            }
+        }
+    }
+
+    for (int i = 0; i < n; ++i) {
+        if (room[i].type == MirrorKind::Plane) continue;
+
+        const double half = P[i].Dist(P[(i + 1) % n]) / 2.0;
+        if (!std::isfinite(half)) continue;   // причина уже названа выше (вне области)
+
+        if (!(room[i].radius >= half)) {
+            Notify(NoteLevel::Error,
+                   QString("Стена %1: радиус %2 меньше половины её длины (%3) - такое зеркало невозможно.")
+                       .arg(i + 1)
+                       .arg(FmtPrecise(room[i].radius))
+                       .arg(FmtPrecise(half)));
+            bad = true;
+        } else if (room[i].radius > Limits::MaxMirrorRadius) {
+            Notify(NoteLevel::Error,
+                   QString("Стена %1: радиус %2 больше допустимого (%3).")
+                       .arg(i + 1)
+                       .arg(FmtPrecise(room[i].radius))
+                       .arg(FmtPrecise(Limits::MaxMirrorRadius)));
+            bad = true;
+        }
+    }
+
+    if (bad) return LoadResult::Failed;
+
+    // ---------- Этап 3: комната собирается отдельно, текущая не трогается ----------
+    Polygon tmp;
+    try {
+        for (int i = 0; i < n; ++i) {
+            bool flattened = false;
+            tmp.sides_.push_back(
+                MakeMirror(room[i].type, P[i], P[(i + 1) % n], room[i].radius, &flattened));
+        }
+    } catch (const std::exception &e) {
+        Notify(NoteLevel::Error,
+               QString("Не удалось построить комнату: %1").arg(QString::fromUtf8(e.what())));
+        return LoadResult::Failed;
+    }
+    tmp.first = P[0];
+    tmp.isExist_ = true;
+    tmp.isCycled_ = true;
+
+    std::vector<const Mirror *> w;
+    for (const auto &side : tmp.sides_) w.push_back(side.get());
+
+    int a = 0, b = 0;
+    const WallCheck res = CheckWalls(w, true, {}, &a, &b);
+    if (res == WallCheck::Cross) {
+        Notify(NoteLevel::Error,
+               QString("Комната некорректна: стены %1 и %2 пересекаются или касаются друг друга.")
+                   .arg(a + 1).arg(b + 1));
+        return LoadResult::Failed;
+    }
+    if (res == WallCheck::TooClose) {
+        Notify(NoteLevel::Error,
+               QString("Комната некорректна: стены %1 и %2 слишком близко друг к другу "
+                       "(ближе толщины линии, %3 пикселей).")
+                   .arg(a + 1).arg(b + 1).arg(Style::WallWidth));
+        return LoadResult::Failed;
+    }
+    if (!tmp.Check()) {
+        Notify(NoteLevel::Error,
+               "Комната некорректна: стены пересекаются или касаются друг друга.");
+        return LoadResult::Failed;
+    }
+
+    // Луч: проверяется так же, как клик по стене. Негодный луч не отменяет загрузку комнаты
+    LoadResult result = LoadResult::RoomOnly;
+    if (haveBeam) {
+        const Points click(beamX, beamY);
+        const BeamPlaceResult pr =
+            tmp.PlaceBeam(click, Limits::BeamWallTolerance, Limits::MinBeamVertexDist);
+
+        if (pr == BeamPlaceResult::Placed) {
+            tmp.SetBeamAngle(beamAngle);
+            result = LoadResult::RoomWithBeam;
+        } else if (pr == BeamPlaceResult::NoWall) {
+            Notify(NoteLevel::Error,
+                   QString("Луч не поставлен: точка %1 не лежит ни на одной стене (допуск %2 пикселей). "
+                           "Комната загружена без луча.")
+                       .arg(PointStr(click))
+                       .arg(static_cast<int>(Limits::BeamWallTolerance)));
+        } else {
+            Notify(NoteLevel::Error,
+                   QString("Луч не поставлен: точка %1 ближе %2 пикселей к вершине. "
+                           "Комната загружена без луча.")
+                       .arg(PointStr(click))
+                       .arg(static_cast<int>(Limits::MinBeamVertexDist)));
+        }
+    }
+
+    // Всё в порядке: заменяем комнату
+    prototype = std::move(tmp);
+
+    Notify(NoteLevel::Info, QString("Из файла загружена комната: сторон %1.").arg(n));
+    if (skippedLines > 0) {
+        Notify(NoteLevel::Warning,
+               QString("В файле больше %1 строк с углами: лишние строки (%2) пропущены, "
+                       "в комнате не больше %1 сторон.")
+                   .arg(Limits::MaxWalls)
+                   .arg(skippedLines));
+    }
+    return result;
 }

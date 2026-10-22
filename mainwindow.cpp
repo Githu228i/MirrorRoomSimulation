@@ -4,6 +4,7 @@
 #include "changepointdialog.h"
 #include "beamangledialog.h"
 #include "savehistorydialog.h"
+#include "formathelpdialog.h"
 #include "Darktheme.h"
 
 #include <QPen>
@@ -178,7 +179,8 @@ MainWindow::MainWindow(QWidget *parent)
     AddMessage(
         QString("Режим редактирования комнаты. Кликайте, чтобы ставить точки "
                 "(комната - от %1 до %2 сторон). Клик по вершине - изменить или соединить её. "
-                "«Начать симуляцию» замкнёт комнату.")
+                "«Начать симуляцию» замкнёт комнату. «Загрузить значения из файла» "
+                "возьмёт комнату и луч из txt-файла.")
             .arg(Limits::MinWalls)
             .arg(Limits::MaxWalls));
 
@@ -191,7 +193,7 @@ MainWindow::MainWindow(QWidget *parent)
     connect(ui->pushButton_3, &QPushButton::clicked,
             this, &MainWindow::ThirdButClicked);
 
-    ui->pushButton_3->setText("Следующее отражение");
+    // Текст кнопки 3 зависит от режима и задаётся в UpdateButtons()
 
     // Кнопка 4: повтор анимации (запуск / остановка)
     connect(ui->pushButton_4, &QPushButton::clicked,
@@ -203,9 +205,6 @@ MainWindow::MainWindow(QWidget *parent)
 
     ui->pushButton->setText("Откатить точку");
     ui->pushButton_2->setText("Начать симуляцию");
-    ui->pushButton_3->setVisible(false);
-    ui->pushButton_4->setVisible(false);
-
     UpdateButtons();
 }
 
@@ -215,6 +214,8 @@ MainWindow::~MainWindow()
 }
 
 // Доступность кнопок (недоступные приглушаются):
+//  - кнопка 3 в режиме редактирования - "Загрузить значения из файла", всегда доступна;
+//  - кнопка 4 в режиме редактирования - справка о формате входного файла, всегда доступна;
 //  - в режиме выбора точки луча недоступны кнопки 2, 3, 4;
 //  - если луч зациклился, недоступны кнопки 3 и 4;
 //  - во время анимации и повтора кнопки приглушены, но остаются нажимаемыми:
@@ -246,9 +247,19 @@ void MainWindow::UpdateButtons()
 
     setState(ui->pushButton,   true,                busy);
     setState(ui->pushButton_2, !picking,            picking || busy);
-    setState(ui->pushButton_3, !picking && !looped, picking || looped || busy);
+    // Кнопка 3: в режиме редактирования загружает комнату из файла, в симуляции - следующее отражение
+    setState(ui->pushButton_3,
+             Redacting || (!picking && !looped),
+             !Redacting && (picking || looped || busy));
+    ui->pushButton_3->setText(Redacting ? "Загрузить значения из файла" : "Следующее отражение");
 
-    if (repeating_)
+    if (Redacting)
+    {
+        // В режиме редактирования кнопка 4 показывает справку о формате входного файла
+        setState(ui->pushButton_4, true, false);
+        ui->pushButton_4->setText("Формат входного файла");
+    }
+    else if (repeating_)
     {
         setState(ui->pushButton_4, true, stopRequested_);
         ui->pushButton_4->setText(stopRequested_ ? "Останавливаю..." : "Остановить повтор");
@@ -363,8 +374,6 @@ void MainWindow::FirstButClicked() {
         Redacting = true;
         ui->pushButton->setText("Откатить точку");
         ui->pushButton_2->setText("Начать симуляцию");
-        ui->pushButton_3->setVisible(false);
-        ui->pushButton_4->setVisible(false);
         ShowSimControls(false);
         const bool hadPath = polygonCreator.HasTrace();
         polygonCreator.ResetTrace();
@@ -376,7 +385,8 @@ void MainWindow::FirstButClicked() {
         AddMessage(
             "Кликните по вершине, чтобы изменить её координаты и тип зеркала, "
             "которое из неё выходит. «Откатить точку» уберёт замыкающую стену "
-            "и разомкнёт комнату. «Начать симуляцию» вернёт к выбору луча.");
+            "и разомкнёт комнату. «Начать симуляцию» вернёт к выбору луча. "
+            "«Загрузить значения из файла» заменит комнату данными из txt-файла.");
         if (polygonCreator.prototype.isBeamSet_)
             AddMessage("Источник луча сохранится, пока вы не измените или не удалите его стену.");
     }
@@ -422,8 +432,6 @@ void MainWindow::SecondButClicked() {
         Redacting = false;
         ui->pushButton->setText("Редактировать комнату");
         ui->pushButton_2->setText("Переставить источник света");
-        ui->pushButton_3->setVisible(true);
-        ui->pushButton_4->setVisible(true);
         ShowSimControls(true);
 
         // форма комнаты могла измениться - пересчитываем направление луча
@@ -483,10 +491,80 @@ void MainWindow::ThirdButClicked() {
     if (IgnoreDuringAnimation())
         return;
 
-    if (Redacting || Beaming || !polygonCreator.prototype.isBeamSet_)
+    // В режиме редактирования кнопка загружает комнату и луч из файла
+    if (Redacting) {
+        LoadRoomFromFile();
+        return;
+    }
+
+    if (Beaming || !polygonCreator.prototype.isBeamSet_)
         return;
 
     StartReflectionStep();
+}
+
+// Загрузка комнаты (и луча) из txt-файла. Разбор и все проверки - в FrontEndOperators::LoadRoom:
+// при любой ошибке (сообщение уже в чате) ничего не меняется. После успеха выполняется то же,
+// что по кнопке "Начать симуляцию": с лучом - сразу режим симуляции, без луча (в файле его нет
+// или он не лежит на стене) - режим выбора луча.
+void MainWindow::LoadRoomFromFile()
+{
+    if (lastLoadDir_.isEmpty())
+        lastLoadDir_ = lastSaveDir_.isEmpty()
+                           ? QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation)
+                           : lastSaveDir_;
+
+    const QString path = QFileDialog::getOpenFileName(
+        this, "Загрузить комнату из файла", lastLoadDir_, "Текстовые файлы (*.txt)");
+
+    if (path.isEmpty())
+    {
+        AddMessage("Загрузка из файла отменена.");
+        return;
+    }
+
+    lastLoadDir_ = QFileInfo(path).absolutePath();
+
+    QFile file(path);
+    if (!file.open(QIODevice::ReadOnly))
+    {
+        AddMessage(
+            QString("Не удалось открыть файл «%1»: %2.").arg(path, file.errorString()),
+            MsgType::Error);
+        return;
+    }
+
+    if (file.size() > Limits::MaxLoadFileBytes)
+    {
+        AddMessage(
+            QString("Файл «%1» слишком большой для загрузки комнаты (больше %2 КБ).")
+                .arg(QFileInfo(path).fileName())
+                .arg(Limits::MaxLoadFileBytes / 1024),
+            MsgType::Error);
+        return;
+    }
+
+    const QByteArray data = file.readAll();
+    if (file.error() != QFileDevice::NoError)
+    {
+        AddMessage(
+            QString("Ошибка при чтении файла «%1»: %2.").arg(path, file.errorString()),
+            MsgType::Error);
+        return;
+    }
+    file.close();
+
+    const std::string text(data.constData(), static_cast<size_t>(data.size()));
+    const LoadResult result = polygonCreator.LoadRoom(text);
+
+    if (result == LoadResult::Failed)
+        return;   // причины уже в чате, комната не изменилась
+
+    AddMessage(QString("Загрузка из файла «%1» выполнена.").arg(QFileInfo(path).fileName()));
+
+    // Комната замкнута и проверена: дальше как после "Начать симуляцию"
+    SecondButClicked();
+    update();
 }
 
 // Кнопка 4: повтор анимации. Первое нажатие запускает отражения одно за другим,
@@ -494,6 +572,15 @@ void MainWindow::ThirdButClicked() {
 // (как и все остальные) нажатия игнорирует.
 void MainWindow::FourthButClicked()
 {
+    // В режиме редактирования: справка о формате txt-файла для загрузки комнаты
+    if (Redacting)
+    {
+        FormatHelpDialog helpDialog(this);
+        helpDialog.move(this->geometry().center() - helpDialog.rect().center());
+        helpDialog.exec();
+        return;
+    }
+
     if (repeating_)
     {
         // Идёт пауза между отражениями: останавливаем сразу, паузу сбрасываем,

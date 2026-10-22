@@ -53,50 +53,56 @@ constexpr double MinX = 0.0;
 constexpr double MaxX = 1580.0;
 constexpr double MinY = 0.0;
 constexpr double MaxY = 1000.0;
-constexpr double MinPointDist      = 10.0;
-constexpr int    MinWalls          = 4;
-constexpr int    MaxWalls          = 9;
-constexpr double ClickRadius       = 5.0;
-constexpr double BeamWallTolerance = 6.0;
-constexpr double MinBeamVertexDist = 10.0;
+constexpr double MinPointDist      = 10.0;      // closer points are "too close"
+constexpr int    MinWalls          = 4;         // walls (corners) in a closed room: at least
+constexpr int    MaxWalls          = 9;         // and at most
+constexpr double ClickRadius       = 5.0;       // click within this distance of a vertex / beam source hits it
+constexpr double BeamWallTolerance = 6.0;       // click tolerance to a wall when placing the beam source
+constexpr double MinBeamVertexDist = 10.0;      // beam source is not closer than this to a vertex
+
+// Loading a room from a file
+constexpr double    MaxMirrorRadius   = 1000000.0;  // largest radius of curvature (same as in the point dialog)
+constexpr double    DefaultBeamAngle  = 90.0;       // beam angle to the wall if the file gives none, degrees
+constexpr long long MaxLoadFileBytes  = 1 << 20;    // room files larger than this (1 MiB) are not read
 }
 
 // ------------------------------------------------------------
 //  Drawing sizes, UI defaults and animation
 // ------------------------------------------------------------
 namespace Style {
-constexpr int    WallWidth           = 5;
-constexpr double PointRadius         = 4.0;
-constexpr double BeamRadius          = 4.0;
-constexpr int    TraceWidth          = 2;
-constexpr int    ReflectPointWidth   = WallWidth + 1;
-constexpr double RaySpeed            = 500.0;
-constexpr int    RaySpeedMin         = 100;
+constexpr int    WallWidth           = 5;                  // wall line width
+constexpr double PointRadius         = 4.0;                // polygon vertex radius
+constexpr double BeamRadius          = 4.0;                // beam source dot radius
+constexpr int    TraceWidth          = 2;                  // reflection line width
+constexpr int    ReflectPointWidth   = WallWidth + 1;      // orange reflection dot
+constexpr double RaySpeed            = 500.0;              // px per second (default)
+constexpr int    RaySpeedMin         = 100;                // slider range, px per second
 constexpr int    RaySpeedMax         = 2000;
-constexpr int    RaySpeedStep        = 50;
-constexpr int    RepeatDelayMin      = 0;
+constexpr int    RaySpeedStep        = 50;                 // PageUp/PageDown = 2 steps
+constexpr int    RepeatDelayMin      = 0;                  // delay between reflections in auto mode, ms
 constexpr int    RepeatDelayMax      = 5000;
-constexpr int    RepeatDelayStep     = 100;
+constexpr int    RepeatDelayStep     = 100;                // PageUp/PageDown = 2 steps
 constexpr int    RepeatDelayDefault  = 500;
-constexpr int    MaxChatMessages     = 500;
-constexpr int    TraceLimitDefault   = 50;
+constexpr int    MaxChatMessages     = 500;                // messages kept in the side chat
+constexpr int    TraceLimitDefault   = 50;                 // last N segments kept on screen
 constexpr int    TraceLimitMin       = 1;
 constexpr int    TraceLimitMax       = 1000000;
-constexpr bool   EraseOldDefault     = false;
+constexpr bool   EraseOldDefault     = false;              // "erase old reflections" checkbox default
 
 // Coordinates are stored as double (matches Points::getX()).
 using CoordType = double;
 
-constexpr int    SaveDecimals      = 3;
+constexpr int    SaveDecimals      = 3;                                        // history file: decimals in coordinates (default)
 constexpr int    SaveDecimalsMax   = std::numeric_limits<CoordType>::max_digits10;
-constexpr int    SaveAngleDecimals = 6;
-constexpr int    WindowWidth       = 2000;
+constexpr int    SaveAngleDecimals = 6;                                        // history file: decimals in angles
+constexpr int    WindowWidth       = 2000;                                     // setFixedSize, same as in .ui
 constexpr int    WindowHeight      = 1300;
-constexpr double DimOpacity        = 0.35;
-constexpr int    MessageDecimals   = 3;
-constexpr int    DelayDecimals     = 1;
+constexpr double DimOpacity        = 0.35;                                     // opacity of unavailable (dimmed) widgets
+constexpr int    MessageDecimals   = 3;                                        // decimals in coordinates in chat messages
+constexpr int    PreciseDecimals   = 3;                                        // decimals where precision matters (radius, half wall length)
+constexpr int    DelayDecimals     = 1;                                        // decimals in the delay label (seconds)
 constexpr double MsPerSecond       = 1000.0;
-constexpr int    MinAnimMs         = 1;
+constexpr int    MinAnimMs         = 1;                                        // minimum duration of one segment animation, ms
 }
 
 // ------------------------------------------------------------
@@ -120,7 +126,7 @@ constexpr int Convex  = 2;
 }
 
 // ------------------------------------------------------------
-//  Allowed beam angle (degrees)
+//  Allowed beam angle (degrees), bounds inclusive
 // ------------------------------------------------------------
 namespace BeamAngle {
 constexpr double Min      = 0.01;
@@ -143,6 +149,8 @@ constexpr int    MaxSegments   = 2000;
 namespace DialogSizes {
 constexpr int ChangeOrConnectWidth  = 480;
 constexpr int ChangeOrConnectHeight = 200;
+constexpr int FormatHelpWidth       = 700;   // справка о формате входного файла
+constexpr int FormatHelpHeight      = 800;
 // The other dialogs use inline setFixedSize(450, 280/330); add entries
 // here if you want them centralized as well.
 }
@@ -151,9 +159,9 @@ constexpr int ChangeOrConnectHeight = 200;
 //  Geometric epsilons (mirror.cpp / polygon.cpp)
 // ------------------------------------------------------------
 namespace GeoEps {
-constexpr double EPS      = 1e-9;
+constexpr double EPS       = 1e-9;
 constexpr double POINT_EPS = 1e-6;
-constexpr double PAR_EPS  = 1e-10;
+constexpr double PAR_EPS   = 1e-10;
 constexpr double FLAT_R    = 1e7;
 constexpr double TRACE_EPS = 1e-7;
 }

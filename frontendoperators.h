@@ -7,6 +7,7 @@
 #include "changepointdialog.h"
 
 #include <vector>
+#include <string>
 #include <functional>
 #include <limits>
 #include <type_traits>
@@ -14,6 +15,14 @@
 
 // Допустимая рабочая область и пороги (в пикселях)
 #include "constants.h"
+
+// Итог загрузки комнаты из файла
+enum class LoadResult
+{
+    Failed,         // ошибка: ничего не изменилось
+    RoomOnly,       // комната загружена, луча нет (его нет в файле или он забракован)
+    RoomWithBeam    // комната и луч загружены
+};
 
 // Уровень сообщения для служебного окна
 enum class NoteLevel { Info, Warning, Error, Reflection };
@@ -53,6 +62,13 @@ public:
     //    заменяются одной плоской), но после удаления должно остаться не меньше Limits::MinWalls
     void DeletePoint(int num);
     void Binding();
+
+    // Загружает замкнутую комнату (и луч, если он есть в файле и лежит на стене) из текста
+    // файла в кодировке UTF-8. Формат: после строки «Углы комнаты:» идут строки с двумя
+    // числами (x y) и необязательным «тип: вогнутое(R)» / «тип: выпуклое(R)»; после строки
+    // «Луч:» - одна строка: x y [угол к стене в градусах]. При любой ошибке сообщение уходит
+    // в notify, а текущая комната остаётся без изменений.
+    LoadResult LoadRoom(const std::string &utf8Text);
 
     // Пошаговая трассировка луча
     bool NextReflection();   // следующая точка отражения (false - не удалось)

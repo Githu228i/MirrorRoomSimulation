@@ -35,6 +35,7 @@ public:
     void FirstButClicked();
     void SecondButClicked();
     void ThirdButClicked();
+    void LoadRoomFromFile();        // кнопка 3 в режиме редактирования: комната и луч из txt-файла
     void UpdateButtons();
 
     // Служебное окно справа
@@ -80,6 +81,7 @@ private:
     bool   eraseOld_ = Style::EraseOldDefault;              // удалять старые отражения (галочка)
     int    traceLimit_ = Style::TraceLimitDefault;          // сколько последних отражений остаётся на экране
     QString lastSaveDir_;                                   // папка последнего сохранения истории
+    QString lastLoadDir_;                                   // папка последней загрузки комнаты из файла
     int     saveDecimals_ = Style::SaveDecimals;            // знаков после запятой в координатах при сохранении
 };
 #endif // MAINWINDOW_H
