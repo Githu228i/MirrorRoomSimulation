@@ -53,7 +53,7 @@ ChangeOrConnectDialog::ChangeOrConnectDialog(QWidget *parent, bool canChange, bo
     )");
 
     textLabel = new QLabel(
-        "ТУТ БУДЕТ ТВОЙ ТЕКСТ",
+        "что сделать с точкой",
         this
         );
 
