@@ -64,7 +64,7 @@ QSlider[objectName^="horizontalSlider"]::handle:horizontal:disabled {
 }
 #textEdit:focus { border-color: @ACCENT@; }
 
-QFrame#line, QFrame#line_2 { background: @BORDER@; color: @BORDER@; border: none; }
+QFrame#line, QFrame#line_2 { background: @BORDER@; border: 1px solid @BORDER@; }
 
 #chatScrollArea QScrollBar:vertical { background: transparent; width: @SBW@px; margin: 0; }
 #chatScrollArea QScrollBar::handle:vertical { background: @BORDER@; border-radius: 5px; min-height: 30px; }
@@ -78,7 +78,7 @@ QFrame#line, QFrame#line_2 { background: @BORDER@; color: @BORDER@; border: none
     s.replace("@HOVER@",   PanelHover.name());
     s.replace("@PRESS@",   PanelPress.name());
     s.replace("@BORDER@",  Border.name());
-    //s.replace("@TEXTDIM@", TextDim.name());
+    s.replace("@TEXTDIM@", QColor(0x5c, 0x62, 0x6b).name());   // приглушённый цвет отключённых элементов
     s.replace("@TEXT@",    Text.name());
     s.replace("@MUTED@",   TextMuted.name());
     s.replace("@ACCENT@",  Accent.name());
@@ -88,6 +88,31 @@ QFrame#line, QFrame#line_2 { background: @BORDER@; color: @BORDER@; border: none
     s.replace("@HND@",     QString::number(SliderHandle));
     s.replace("@SBW@",     QString::number(ScrollBarWidth));
     return s;
+}
+
+// Выпадающий список QComboBox в диалогах (тёмный, в цвет поля ввода диалога).
+// Сам список - отдельное окно, без этого правила оно рисуется системным белым фоном.
+inline QString DialogComboPopupStyle()
+{
+    return QStringLiteral(R"(
+QComboBox QAbstractItemView {
+    background-color: #303134;
+    color: white;
+    border: 1px solid #5f6368;
+    outline: 0;
+    selection-background-color: #4a6fa5;
+    selection-color: white;
+}
+QComboBox QAbstractItemView::item {
+    min-height: 26px;
+    padding-left: 6px;
+}
+QComboBox QAbstractItemView::item:hover,
+QComboBox QAbstractItemView::item:selected {
+    background-color: #4a6fa5;
+    color: white;
+}
+)");
 }
 
 } // namespace Theme

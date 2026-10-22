@@ -1,10 +1,12 @@
 #include "changepointdialog.h"
 #include "mirror.h"
 #include "frontendoperators.h"   // MirrorKind
+#include "Darktheme.h"           // Theme::DialogComboPopupStyle
 
 #include <QLabel>
 #include <QDoubleSpinBox>
 #include <QComboBox>
+#include <QStyledItemDelegate>
 #include <QPushButton>
 #include <QVBoxLayout>
 #include <QHBoxLayout>
@@ -63,7 +65,7 @@ ChangePointDialog::ChangePointDialog(
         QPushButton:pressed {
             background-color: #303134;
         }
-    )");
+    )" + Theme::DialogComboPopupStyle());
 
     pointLabel = new QLabel(
         "Точка номер: " + QString::number(pointNumber),
@@ -106,6 +108,8 @@ ChangePointDialog::ChangePointDialog(
     mirrorLabel->setWordWrap(true);
 
     mirrorType = new QComboBox(this);
+    // Без этого делегата список рисуется системным стилем и игнорирует подсветку из стиля
+    mirrorType->setItemDelegate(new QStyledItemDelegate(mirrorType));
 
     mirrorType->addItem("Плоское зеркало");
     mirrorType->addItem("Вогнутое зеркало");
