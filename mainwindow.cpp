@@ -1495,30 +1495,18 @@ void MainWindow::paintEvent(QPaintEvent *event)
         tracePen.setWidth(Style::TraceWidth);
         painter.setPen(tracePen);
 
-        // Если включено удаление, остаются только последние traceLimit_ отрезков. Пока растёт новый отрезок,
-        // самый старый плавно стирается с начала (с той же скоростью, с какой растёт новый).
+        // Если включено удаление, остаются только последние traceLimit_ отрезков (вместе с растущим).
+        // Старый отрезок пропадает сразу, без анимации, как только начинается новый.
         // Сама история history_ не обрезается: по ней ищется зацикливание.
         size_t firstSeg = 1;
-        bool fadeOldest = false;
         const size_t maxLines = eraseOld_ ? static_cast<size_t>(traceLimit_) : size_t(0);
         if (maxLines > 0 && hist.size() - 1 > maxLines)
-        {
             firstSeg = hist.size() - maxLines;
-            if (animating_)
-            {
-                --firstSeg;          // ещё не стёртый до конца отрезок
-                fadeOldest = true;
-            }
-        }
 
         for (size_t k = firstSeg; k < hist.size(); ++k)
         {
             QPointF from(hist[k - 1].getX(), hist[k - 1].getY());
             QPointF to(hist[k].getX(), hist[k].getY());
-
-            // Самый старый отрезок стирается с начала: начало движется к концу
-            if (fadeOldest && k == firstSeg)
-                from = from + (to - from) * animProgress_;
 
             // Последний отрезок во время анимации растёт от нуля до полной длины
             if (animating_ && k == hist.size() - 1)
