@@ -14,7 +14,6 @@ public:
     double getX() const;
     double getY() const;
     double Dist(const Points& other) const;
-    virtual std::string Cords() const;
 
 protected:                                  // было private: теперь доступно наследникам
     double x_;
@@ -27,7 +26,6 @@ class Beam : public Points
 public:
     Beam(double x = 0.0, double y = 0.0, double angle = 0.0);
     double getA() const;
-    std::string Cords() const override;
 
 private:
     double angle_;

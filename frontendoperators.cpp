@@ -5,12 +5,10 @@
 #include <algorithm>
 #include <vector>
 #include <cmath>
+#include "constants.h"
 
+using namespace FeEps;
 namespace {
-
-constexpr double SamePointEps  = 1e-6;   // точки ближе этого считаются совпавшими (пиксели)
-constexpr double NoMoveEps     = 1e-9;   // смещение меньше этого - точка не сдвинулась
-constexpr int    WallScanSteps = 120;    // на сколько шагов делится стена при поиске наименьшего расстояния до другой
 
 // Тип зеркала (см. MirrorKind)
 int TypeOf(const Mirror &m)

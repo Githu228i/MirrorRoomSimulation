@@ -659,9 +659,15 @@
 	"HEADERS" : 
 	[
 		[
-			"/home/xewhysis/C++/gitprojects/MirrorRoomSimulation/backendoperators.h",
+			"/home/xewhysis/C++/gitprojects/MirrorRoomSimulation/Darktheme.h",
 			"MU",
-			"EWIEGA46WW/moc_backendoperators.cpp",
+			"EWIEGA46WW/moc_Darktheme.cpp",
+			null
+		],
+		[
+			"/home/xewhysis/C++/gitprojects/MirrorRoomSimulation/beamangledialog.h",
+			"MU",
+			"EWIEGA46WW/moc_beamangledialog.cpp",
 			null
 		],
 		[
@@ -674,6 +680,12 @@
 			"/home/xewhysis/C++/gitprojects/MirrorRoomSimulation/changepointdialog.h",
 			"MU",
 			"EWIEGA46WW/moc_changepointdialog.cpp",
+			null
+		],
+		[
+			"/home/xewhysis/C++/gitprojects/MirrorRoomSimulation/constants.h",
+			"MU",
+			"EWIEGA46WW/moc_constants.cpp",
 			null
 		],
 		[
@@ -705,6 +717,12 @@
 			"MU",
 			"EWIEGA46WW/moc_polygon.cpp",
 			null
+		],
+		[
+			"/home/xewhysis/C++/gitprojects/MirrorRoomSimulation/savehistorydialog.h",
+			"MU",
+			"EWIEGA46WW/moc_savehistorydialog.cpp",
+			null
 		]
 	],
 	"HEADER_EXTENSIONS" : [ "h", "hh", "h++", "hm", "hpp", "hxx", "in", "txx" ],
@@ -727,7 +745,7 @@
 		"/nix/store/6qkfgq14vwp19v69ciwdrac5yjcrj5qn-qtbase-6.11.2/include/QtGui",
 		"/nix/store/pdcwbw6z36grx39dfhb4y0g9p00i2ajf-libglvnd-1.7.0-dev/include",
 		"/nix/store/h0dk1ba61swy9csvl589fywsgw6r2y35-qt6-dev/include",
-		"/nix/store/m6jp8iq32w828lmynns4f4g406bigsrn-qtcreator-20.0.1-dev/include",
+		"/nix/store/rv38r6azhwl8y41y36n453mg79c9hzyp-qtcreator-20.0.1-dev/include",
 		"/nix/store/47nlx1dpb8zd73vjp2zms7r8k9xkzndp-libxkbcommon-1.13.2-dev/include",
 		"/nix/store/mc7dwhpksng0rmfbdq68z6vvlm9nsd8k-fontconfig-2.18.3-dev/include",
 		"/nix/store/mqxjifyyqbgjs66hvghd1zw26sdf5hw1-freetype-2.14.3-dev/include",
@@ -784,7 +802,7 @@
 	"SOURCES" : 
 	[
 		[
-			"/home/xewhysis/C++/gitprojects/MirrorRoomSimulation/backendoperators.cpp",
+			"/home/xewhysis/C++/gitprojects/MirrorRoomSimulation/beamangledialog.cpp",
 			"MU",
 			null
 		],
@@ -825,6 +843,11 @@
 		],
 		[
 			"/home/xewhysis/C++/gitprojects/MirrorRoomSimulation/polygon.cpp",
+			"MU",
+			null
+		],
+		[
+			"/home/xewhysis/C++/gitprojects/MirrorRoomSimulation/savehistorydialog.cpp",
 			"MU",
 			null
 		]

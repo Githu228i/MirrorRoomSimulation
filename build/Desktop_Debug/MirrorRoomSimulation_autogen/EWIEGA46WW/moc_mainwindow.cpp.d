@@ -1,6 +1,7 @@
 /home/xewhysis/C++/gitprojects/MirrorRoomSimulation/build/Desktop_Debug/MirrorRoomSimulation_autogen/EWIEGA46WW/moc_mainwindow.cpp: /home/xewhysis/C++/gitprojects/MirrorRoomSimulation/mainwindow.h \
   /home/xewhysis/C++/gitprojects/MirrorRoomSimulation/build/Desktop_Debug/MirrorRoomSimulation_autogen/moc_predefs.h \
   /home/xewhysis/C++/gitprojects/MirrorRoomSimulation/changepointdialog.h \
+  /home/xewhysis/C++/gitprojects/MirrorRoomSimulation/constants.h \
   /home/xewhysis/C++/gitprojects/MirrorRoomSimulation/frontendoperators.h \
   /home/xewhysis/C++/gitprojects/MirrorRoomSimulation/mirror.h \
   /home/xewhysis/C++/gitprojects/MirrorRoomSimulation/points.h \
@@ -365,6 +366,7 @@
   /nix/store/6qkfgq14vwp19v69ciwdrac5yjcrj5qn-qtbase-6.11.2/include/QtCore/qversiontagging.h \
   /nix/store/6qkfgq14vwp19v69ciwdrac5yjcrj5qn-qtbase-6.11.2/include/QtCore/qxptype_traits.h \
   /nix/store/6qkfgq14vwp19v69ciwdrac5yjcrj5qn-qtbase-6.11.2/include/QtCore/qyieldcpu.h \
+  /nix/store/6qkfgq14vwp19v69ciwdrac5yjcrj5qn-qtbase-6.11.2/include/QtGui/QColor \
   /nix/store/6qkfgq14vwp19v69ciwdrac5yjcrj5qn-qtbase-6.11.2/include/QtGui/QMouseEvent \
   /nix/store/6qkfgq14vwp19v69ciwdrac5yjcrj5qn-qtbase-6.11.2/include/QtGui/QPainter \
   /nix/store/6qkfgq14vwp19v69ciwdrac5yjcrj5qn-qtbase-6.11.2/include/QtGui/QTransform \

@@ -10,12 +10,7 @@ class QPushButton;
 class QLineEdit;
 class QEvent;
 
-// Допустимый угол между стеной и лучом (градусы), границы включительно
-namespace BeamAngle {
-constexpr double Min = 0.01;
-constexpr double Max = 179.99;
-constexpr int    Decimals = 2;   // знаков после запятой в поле и в сообщениях
-}
+#include "constants.h"
 
 class BeamAngleDialog : public QDialog
 {

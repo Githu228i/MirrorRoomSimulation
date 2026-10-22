@@ -2,11 +2,10 @@
 #include <cmath>
 #include <algorithm>
 #include <iomanip>
+#include "constants.h"
 
+using namespace GeoEps;
 namespace {
-constexpr double EPS       = 1e-9;
-constexpr double TRACE_EPS = 1e-7;   // минимальное расстояние до следующего удара
-constexpr double POINT_EPS = 1e-6;
 
 bool Close(const Points& a, const Points& b) {
     return a.Dist(b) < POINT_EPS;
@@ -108,23 +107,6 @@ Points ReflectDirection(const Points& dir, const Points& n) {
 // ============================================================
 Polygon::Polygon() {}
 
-Polygon::Polygon(const std::vector<Mirror>& sides, Beam beam)
-    : beam_(beam)
-{
-    sides_.reserve(sides.size());
-    for (const auto& s : sides) {
-        if (dynamic_cast<const PlaneMirror*>(&s)) {
-            sides_.push_back(std::make_unique<PlaneMirror>(s.getStart(), s.getEnd()));
-        }
-        else if (dynamic_cast<const ConcaveMirror*>(&s)) {
-            sides_.push_back(std::make_unique<ConcaveMirror>(s.getStart(), s.getEnd(), s.getRad()));
-        }
-        else if (dynamic_cast<const ConvexMirror*>(&s)) {
-            sides_.push_back(std::make_unique<ConvexMirror>(s.getStart(), s.getEnd(), s.getRad()));
-        }
-    }
-}
-
 bool Polygon::isExist() const {
     return isExist_;
 }
@@ -133,48 +115,8 @@ bool Polygon::isCycled() const {
     return isCycled_;
 }
 
-void Polygon::Write() const {
-    std::ofstream log("points.txt");
-    if (!log.is_open()) {
-        std::cerr << "The log cannot be opened." << std::endl;
-        return;
-    }
-    log << "-------------------------------" << std::endl;
-    log << "Vertices of the polygon:" << std::endl;
-    for (const auto& s : sides_) {
-        log << s->getStart().Cords() << std::endl;
-    }
-    log << "Beam: " << beam_.Cords() << std::endl;
-}
 
-void Polygon::Push(const Mirror& other) {
-    if (dynamic_cast<const PlaneMirror*>(&other)) {
-        sides_.push_back(std::make_unique<PlaneMirror>(
-            other.getStart(), other.getEnd()
-            ));
-    }
-    else if (dynamic_cast<const ConcaveMirror*>(&other)) {
-        sides_.push_back(std::make_unique<ConcaveMirror>(
-            other.getStart(), other.getEnd(), other.getRad()
-            ));
-    }
-    else if (dynamic_cast<const ConvexMirror*>(&other)) {
-        sides_.push_back(std::make_unique<ConvexMirror>(
-            other.getStart(), other.getEnd(), other.getRad()
-            ));
-    }
-    Write();
-}
 
-void Polygon::Del(int idx) {
-    if (idx < 0 || idx >= Size()) return;
-    if (isBeamSet_) {
-        if (beamWall_ == idx)      isBeamSet_ = false;
-        else if (beamWall_ > idx)  --beamWall_;
-    }
-    sides_.erase(sides_.begin() + idx);
-    Write();
-}
 
 int Polygon::Size() const {
     return static_cast<int>(sides_.size());
@@ -287,41 +229,6 @@ bool Polygon::Check() const {
     return true;
 }
 
-void Polygon::TraceBeam(int maxBounces) {
-    std::ofstream log("beam.txt");
-    if (!log.is_open()) {
-        std::cerr << "beam.txt cannot be opened." << std::endl;
-        return;
-    }
-
-    Points pos(beam_.getX(), beam_.getY());
-    Points dir(std::cos(beam_.getA()), std::sin(beam_.getA()));
-
-    log << std::fixed << std::setprecision(6);
-    log << pos.getX() << " " << pos.getY() << std::endl;
-
-    for (int bounce = 0; bounce < maxBounces; ++bounce) {
-        double bestT = -1.0;
-        int bestIdx = -1;
-
-        for (int i = 0; i < Size(); ++i) {
-            double t = RayMirrorIntersect(pos, dir, *sides_[i]);
-            if (t > TRACE_EPS && (bestT < 0 || t < bestT)) {
-                bestT = t;
-                bestIdx = i;
-            }
-        }
-        if (bestIdx < 0) break;   // луч вышел
-
-        Points hit(pos.getX() + bestT * dir.getX(),
-                   pos.getY() + bestT * dir.getY());
-        log << hit.getX() << " " << hit.getY() << std::endl;
-
-        Points normal = GetNormal(hit, dir, *sides_[bestIdx]);
-        dir = ReflectDirection(dir, normal);
-        pos = hit;
-    }
-}
 
 std::pair<Beam, Points> Polygon::TraceBeamIter(const Beam& initial) const {
     Points pos(initial.getX(), initial.getY());

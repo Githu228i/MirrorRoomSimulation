@@ -9,11 +9,7 @@ class QPainter;
 
 // Рисование дуг: дуга выводится ломаной (drawArc с целыми углами в 1/16 градуса
 // при большом радиусе смещает концы дуги на десятки пикселей)
-namespace MirrorDraw {
-constexpr double SegmentLength = 3.0;    // примерная длина звена ломаной, пикселей
-constexpr int    MinSegments   = 8;      // не меньше стольких звеньев
-constexpr int    MaxSegments   = 2000;   // и не больше
-}
+#include "constants.h"
 
 // Зеркало: отрезок (rad == 0 или очень большой радиус) либо МЕНЬШАЯ дуга
 // окружности радиуса |rad| между start и end (до полуокружности включительно).
@@ -49,8 +45,6 @@ public:
 
     // ---- Пересечения ----
     virtual std::vector<Points> Intersections(const Mirror& other) const;
-    virtual bool Touches(const Mirror& other) const;
-    virtual bool Crossing(const Mirror& other) const;
 
     // ---- Рисование ----
     virtual void Draw(

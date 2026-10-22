@@ -1,39 +1,21 @@
 #ifndef DARKTHEME_H
 #define DARKTHEME_H
 
-#include <QColor>
 #include <QString>
+#include <QColor>
 
-// Единая тёмная палитра. Цвета для paintEvent и для стилей виджетов берутся отсюда.
+#include "constants.h"
+
+// ============================================================
+//  Стиль главного окна.
+//
+//  Все цвета и размеры виджетов живут в constants.h
+//  (namespace Theme). Здесь только собирается QSS-строка:
+//  правила привязаны к именам виджетов, поэтому на диалоги
+//  и пузыри чата не влияют.
+// ============================================================
 namespace Theme {
 
-// Фон окна и рабочей зоны
-inline const QColor Window   (0x1b, 0x1d, 0x21);  // фон окна
-inline const QColor Canvas   (0x12, 0x14, 0x17);  // фон рабочей зоны (комната)
-inline const QColor CanvasBorder(0x34, 0x38, 0x40); // рамка рабочей зоны
-// Элементы управления
-inline const QColor Panel    (0x26, 0x29, 0x2e);  // кнопки, поле ввода
-inline const QColor PanelHover(0x30, 0x34, 0x3b);
-inline const QColor PanelPress(0x1f, 0x22, 0x26);
-inline const QColor Border   (0x3a, 0x3e, 0x46);
-inline const QColor Text     (0xe6, 0xe8, 0xeb);
-inline const QColor TextMuted(0x8b, 0x91, 0x9b);
-inline const QColor Accent   (0x4d, 0xa3, 0xff);  // ползунки, галочка, фокус
-// Рисование комнаты (на тёмном фоне чёрное не видно)
-inline const QColor Wall     (0xe6, 0xe8, 0xeb);  // стены и вершины
-inline const QColor Source   (0xff, 0x52, 0x52);  // источник луча (красный)
-inline const QColor Trace    (0xff, 0xd5, 0x4a);  // пройденные линии (жёлтый)
-inline const QColor Reflect  (0xff, 0x9f, 0x1a);  // точка последнего отражения (оранжевый)
-
-// Размеры элементов стиля (px)
-inline constexpr int ButtonRadius   = 10;
-inline constexpr int CheckSize      = 26;
-inline constexpr int SliderGroove   = 6;
-inline constexpr int SliderHandle   = 20;
-inline constexpr int ScrollBarWidth = 10;
-
-// Стиль главного окна. Все правила привязаны к именам виджетов,
-// поэтому на диалоги и пузыри чата не влияют.
 inline QString MainStyle()
 {
     QString s = QStringLiteral(R"(
@@ -96,7 +78,7 @@ QFrame#line, QFrame#line_2 { background: @BORDER@; color: @BORDER@; border: none
     s.replace("@HOVER@",   PanelHover.name());
     s.replace("@PRESS@",   PanelPress.name());
     s.replace("@BORDER@",  Border.name());
-    s.replace("@TEXTDIM@", QColor(0x5a, 0x60, 0x6a).name());
+    //s.replace("@TEXTDIM@", TextDim.name());
     s.replace("@TEXT@",    Text.name());
     s.replace("@MUTED@",   TextMuted.name());
     s.replace("@ACCENT@",  Accent.name());

@@ -19,7 +19,6 @@ set(PROJECT_SOURCES
     mirror.h mirror.cpp
             points.h points.cpp
             frontendoperators.h frontendoperators.cpp
-            backendoperators.h backendoperators.cpp
             polygon.h polygon.cpp
 )
 
@@ -33,7 +32,7 @@ qt_add_executable(MirrorRoomSimulation
     changepointdialog.h changepointdialog.cpp
     beamangledialog.h beamangledialog.cpp
     savehistorydialog.h savehistorydialog.cpp
-    Darktheme.h
+    Darktheme.h constants.h
 )
 
 qt_add_translations(MirrorRoomSimulation

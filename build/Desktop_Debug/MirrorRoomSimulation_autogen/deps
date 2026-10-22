@@ -1,7 +1,8 @@
 MirrorRoomSimulation_autogen/timestamp: \
 	/home/xewhysis/C++/gitprojects/MirrorRoomSimulation/CMakeLists.txt \
-	/home/xewhysis/C++/gitprojects/MirrorRoomSimulation/backendoperators.cpp \
-	/home/xewhysis/C++/gitprojects/MirrorRoomSimulation/backendoperators.h \
+	/home/xewhysis/C++/gitprojects/MirrorRoomSimulation/Darktheme.h \
+	/home/xewhysis/C++/gitprojects/MirrorRoomSimulation/beamangledialog.cpp \
+	/home/xewhysis/C++/gitprojects/MirrorRoomSimulation/beamangledialog.h \
 	/home/xewhysis/C++/gitprojects/MirrorRoomSimulation/build/Desktop_Debug/.qtcreator/cmake-helper/maintenance_tool_provider.cmake \
 	/home/xewhysis/C++/gitprojects/MirrorRoomSimulation/build/Desktop_Debug/.qtcreator/cmake-helper/package-manager.cmake \
 	/home/xewhysis/C++/gitprojects/MirrorRoomSimulation/build/Desktop_Debug/.qtcreator/cmake-helper/qtcreator-project.cmake \
@@ -12,6 +13,7 @@ MirrorRoomSimulation_autogen/timestamp: \
 	/home/xewhysis/C++/gitprojects/MirrorRoomSimulation/changeorconnectdialog.h \
 	/home/xewhysis/C++/gitprojects/MirrorRoomSimulation/changepointdialog.cpp \
 	/home/xewhysis/C++/gitprojects/MirrorRoomSimulation/changepointdialog.h \
+	/home/xewhysis/C++/gitprojects/MirrorRoomSimulation/constants.h \
 	/home/xewhysis/C++/gitprojects/MirrorRoomSimulation/frontendoperators.cpp \
 	/home/xewhysis/C++/gitprojects/MirrorRoomSimulation/frontendoperators.h \
 	/home/xewhysis/C++/gitprojects/MirrorRoomSimulation/main.cpp \
@@ -23,6 +25,8 @@ MirrorRoomSimulation_autogen/timestamp: \
 	/home/xewhysis/C++/gitprojects/MirrorRoomSimulation/points.h \
 	/home/xewhysis/C++/gitprojects/MirrorRoomSimulation/polygon.cpp \
 	/home/xewhysis/C++/gitprojects/MirrorRoomSimulation/polygon.h \
+	/home/xewhysis/C++/gitprojects/MirrorRoomSimulation/savehistorydialog.cpp \
+	/home/xewhysis/C++/gitprojects/MirrorRoomSimulation/savehistorydialog.h \
 	/nix/store/5q6bdxkp7lc70gn9mnf4yiybrx8ry5xq-gcc-16.2.0/include/c++/16.2.0/algorithm \
 	/nix/store/5q6bdxkp7lc70gn9mnf4yiybrx8ry5xq-gcc-16.2.0/include/c++/16.2.0/array \
 	/nix/store/5q6bdxkp7lc70gn9mnf4yiybrx8ry5xq-gcc-16.2.0/include/c++/16.2.0/atomic \
@@ -242,6 +246,7 @@ MirrorRoomSimulation_autogen/timestamp: \
 	/nix/store/6qkfgq14vwp19v69ciwdrac5yjcrj5qn-qtbase-6.11.2/include/QtCore/QRect \
 	/nix/store/6qkfgq14vwp19v69ciwdrac5yjcrj5qn-qtbase-6.11.2/include/QtCore/QSize \
 	/nix/store/6qkfgq14vwp19v69ciwdrac5yjcrj5qn-qtbase-6.11.2/include/QtCore/QSizeF \
+	/nix/store/6qkfgq14vwp19v69ciwdrac5yjcrj5qn-qtbase-6.11.2/include/QtCore/QString \
 	/nix/store/6qkfgq14vwp19v69ciwdrac5yjcrj5qn-qtbase-6.11.2/include/QtCore/QVector \
 	/nix/store/6qkfgq14vwp19v69ciwdrac5yjcrj5qn-qtbase-6.11.2/include/QtCore/q17memory.h \
 	/nix/store/6qkfgq14vwp19v69ciwdrac5yjcrj5qn-qtbase-6.11.2/include/QtCore/q20bit.h \
@@ -383,6 +388,7 @@ MirrorRoomSimulation_autogen/timestamp: \
 	/nix/store/6qkfgq14vwp19v69ciwdrac5yjcrj5qn-qtbase-6.11.2/include/QtCore/qversiontagging.h \
 	/nix/store/6qkfgq14vwp19v69ciwdrac5yjcrj5qn-qtbase-6.11.2/include/QtCore/qxptype_traits.h \
 	/nix/store/6qkfgq14vwp19v69ciwdrac5yjcrj5qn-qtbase-6.11.2/include/QtCore/qyieldcpu.h \
+	/nix/store/6qkfgq14vwp19v69ciwdrac5yjcrj5qn-qtbase-6.11.2/include/QtGui/QColor \
 	/nix/store/6qkfgq14vwp19v69ciwdrac5yjcrj5qn-qtbase-6.11.2/include/QtGui/QMouseEvent \
 	/nix/store/6qkfgq14vwp19v69ciwdrac5yjcrj5qn-qtbase-6.11.2/include/QtGui/QPainter \
 	/nix/store/6qkfgq14vwp19v69ciwdrac5yjcrj5qn-qtbase-6.11.2/include/QtGui/QTransform \

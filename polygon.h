@@ -18,7 +18,6 @@ class Polygon
 {
 public:
     Polygon();
-    Polygon(const std::vector<Mirror>& sides, Beam beam);
 
     friend class MainWindow;
     friend class FrontEndOperators;
@@ -28,17 +27,12 @@ public:
     bool isCycled() const;
 
     // --- мои функции ---
-    void Write() const;
-    void Push(const Mirror& other);
-    void Del(int idx);
     int  Size() const;
 
     // Контур замкнут и непрерывен, стороны не пересекаются и не касаются
     // нигде, кроме общих вершин соседних сторон.
     bool Check() const;
 
-    // Трассировка луча, результат в beam.txt
-    void TraceBeam(int maxBounces = 100);
 
     // Ставит источник луча на ближайшую стену (не дальше maxDist от клика),
     // но не ближе minVertexDist к вершинам.

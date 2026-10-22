@@ -8,24 +8,18 @@
 #include <cmath>
 #include <stdexcept>
 #include <vector>
+#include "constants.h"
 
-
+using namespace GeoEps;   // EPS, PointEps, ParEps, FlatR, TraceEps
 // ============================================================
 // Вспомогательные функции пересечений
 // ============================================================
 namespace {
-constexpr double EPS       = 1e-9;
-constexpr double POINT_EPS = 1e-6;
-constexpr double PAR_EPS   = 1e-10;
-constexpr double FLAT_R    = 1e7;
 
 double ArcTol(double r) { return 1e-6 + 1e-12 * r; }
 
 bool PointsEqual(const Points& a, const Points& b) {
     return a.Dist(b) < POINT_EPS;
-}
-bool IsEndpoint(const Points& p, const Mirror& m) {
-    return PointsEqual(p, m.getStart()) || PointsEqual(p, m.getEnd());
 }
 void AddUniquePoint(std::vector<Points>& pts, const Points& p) {
     for (const auto& e : pts) if (PointsEqual(e, p)) return;
@@ -310,20 +304,7 @@ std::vector<Points> Mirror::Intersections(const Mirror& other) const
     return result;
 }
 
-bool Mirror::Touches(const Mirror& other) const
-{
-    return !Intersections(other).empty();
-}
 
-bool Mirror::Crossing(const Mirror& other) const
-{
-    std::vector<Points> pts = Intersections(other);
-    if (pts.empty()) return false;
-    if (pts.size() >= 2) return true;
-
-    const Points& p = pts[0];
-    return !(IsEndpoint(p, *this) && IsEndpoint(p, other));
-}
 
 
 // ============================================================
